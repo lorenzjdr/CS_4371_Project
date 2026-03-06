@@ -21,64 +21,77 @@ from tkinter import filedialog
 import csv
 
 
+# load dataframe
+df = pd.read_csv('Dataset/environmentMonitoring.csv/environmentMonitoring.csv')
+print(df.head())
+
+# rename dataset columns to match what the model 
+df = df.rename(columns={
+    'frame.len': 'Length',
+    'tcp.dstport': 'DestinationPort',
+    'tcp.flags': 'FlagValue',
+    'label': 'Label',
+    'class': 'Device_name',
+    'ip.src': 'SourceIP',
+    'ip.dst': 'DestinationIP',
+})
+
+#     def handle_non_numerical_data(df):
+#         columns = df.columns.values
+#         for column in columns:
+#             text_digit_vals = {'0x0010': 10, '0x0018': 18, '0x0012': 12, '0x0014': 14, '0x0011': 11, '0x0002': 2}
+#             def convert_to_int(val):
+#                 return text_digit_vals[val]
+
+#             if df[column].dtype != np.int64 and df[column].dtype != np.float64:
+#                 column_contents = df[column].values.tolist()
+#                 unique_elements = set(column_contents)
+#                 #print('unique:', unique_elements)
+#                 x = 0
+#                 for unique in unique_elements:
+#                     if unique not in text_digit_vals:
+#                         text_digit_vals[unique] = x
+#                         x+=1
+#                     print(x)
+
+#                 df[column] = list(map(convert_to_int, df[column]))
+
+#         return df
+
+#     f = handle_non_numerical_data(df)
+#     #print(df.head())
+#     start_time = time.time()
+
+#     #Model Train
+#     data = pd.read_csv('train.csv')
+#     data = shuffle(data)
+#     X = df[['DestinationPort', 'Length', 'FlagValue']]
+#     #X = df[['Length']]
+#     y = df['Label']
+#     #y = df['FlagValue']
 
 
-    def handle_non_numerical_data(df):
-        columns = df.columns.values
-        for column in columns:
-            text_digit_vals = {'0x0010': 10, '0x0018': 18, '0x0012': 12, '0x0014': 14, '0x0011': 11, '0x0002': 2}
-            def convert_to_int(val):
-                return text_digit_vals[val]
 
-            if df[column].dtype != np.int64 and df[column].dtype != np.float64:
-                column_contents = df[column].values.tolist()
-                unique_elements = set(column_contents)
-                #print('unique:', unique_elements)
-                x = 0
-                for unique in unique_elements:
-                    if unique not in text_digit_vals:
-                        text_digit_vals[unique] = x
-                        x+=1
-                    print(x)
+#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=8)
 
-                df[column] = list(map(convert_to_int, df[column]))
+#     models = {}
 
-        return df
+#     # Random Forest
 
-    f = handle_non_numerical_data(df)
-    #print(df.head())
-    start_time = time.time()
-
-    #Model Train
-    data = pd.read_csv('train.csv')
-    data = shuffle(data)
-    X = df[['DestinationPort', 'Length', 'FlagValue']]
-    #X = df[['Length']]
-    y = df['Label']
-    #y = df['FlagValue']
+#     models['Random Forest'] = RandomForestClassifier()
 
 
+#     accuracy, precision, recall = {}, {}, {}
+#     for key in models.keys():
+#         print(key)
+#         # Fit the classifier model
+#         if os.path.exists('./' + key.replace(" ", '') + str(i) +'_' + 'profile' + '.pkl'):
+#             os.remove('./' + key.replace(" ", '') + str(i) + '_' + 'profile' + '.pkl')
+#         trained_model = models[key].fit(X_train, y_train)
+#         with open(key.replace(" ", '') + str(i) + '_' + 'profile' + '.pkl', 'wb') as f:
+#             pickle.dump(trained_model, f)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=8)
-
-    models = {}
-
-    # Random Forest
-
-    models['Random Forest'] = RandomForestClassifier()
-
-
-    accuracy, precision, recall = {}, {}, {}
-    for key in models.keys():
-        print(key)
-        # Fit the classifier model
-        if os.path.exists('./' + key.replace(" ", '') + str(i) +'_' + 'profile' + '.pkl'):
-            os.remove('./' + key.replace(" ", '') + str(i) + '_' + 'profile' + '.pkl')
-        trained_model = models[key].fit(X_train, y_train)
-        with open(key.replace(" ", '') + str(i) + '_' + 'profile' + '.pkl', 'wb') as f:
-            pickle.dump(trained_model, f)
-
-print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+# print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
 #clf = RandomForestClassifier(n_estimators=10)
 
