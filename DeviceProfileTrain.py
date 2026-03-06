@@ -20,32 +20,8 @@ from tkinter import *
 from tkinter import filedialog
 import csv
 
-os.system("tshark -r PlugTkn.pcap -T fields -2 -e frame.time_epoch -e ip.src -e ip.dst -e frame.len -e tcp.port -e tcp.flags  -E separator=, -E occurrence=f -R (ip.addr==192.168.1.4)> PlugTkn.csv")
-os.system("tshark -r PlugWM.pcap -T fields -2 -e frame.time_epoch -e ip.src -e ip.dst -e frame.len -e tcp.port -e tcp.flags  -E separator=, -E occurrence=f -R (ip.addr==192.168.1.5)> PlugWM.csv")
-os.system("tshark -r bulb1.pcap -T fields -2 -e frame.time_epoch -e ip.src -e ip.dst -e frame.len -e tcp.port -e tcp.flags  -E separator=, -E occurrence=f -R (ip.addr==192.168.1.26)> bulb1.csv")
 
-for i in range(3):
-    file1 = filedialog.askopenfilename(initialdir="path\to\the\dataset\directory")
-    with open(file1, newline='') as f:
-        r = csv.reader(f)
-        data = [line for line in r]
-    with open(file1, 'w', newline='') as f:
-        w = csv.writer(f)
-        w.writerow(['Time', 'SourceIP', 'DestinationIP', 'Length', 'DestinationPort', 'FlagValue'])
-        # w.writerow(['Time', 'SourceIP', 'DestinationIP', 'Length', 'DestinationPort', 'Info'])
-        w.writerows(data)
-    df = pd.read_csv(file1)
-    print(df.head())
 
-    x = input('device name:')
-    df['Device_name']= x
-    df['Label'] = input('integer number:')
-    file2 = df.to_csv(file1)
-    df = pd.read_csv(file1)
-    print(df.head())
-    df = df.drop(columns=['SourceIP', 'DestinationIP', 'Device_name'])
-    df = df.dropna()
-    #changing non numerical data to numerical data
 
     def handle_non_numerical_data(df):
         columns = df.columns.values
