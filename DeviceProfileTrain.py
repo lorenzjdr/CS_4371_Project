@@ -57,7 +57,7 @@ def handle_non_numerical_data(df):
                     x+=1
                 print(x)
             df[column] = list(map(convert_to_int, df[column]))
-        return df
+    return df
 
 df = handle_non_numerical_data(df)
 #     #print(df.head())
