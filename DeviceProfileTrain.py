@@ -71,27 +71,37 @@ df = handle_non_numerical_data(df)
 
 # used the features the researchers used
 X = df[['DestinationPort', 'Length', 'FlagValue']]
-y = df['FlagValue']
+y = df['FlagValue'] # This needs to be fixed; the new data only has 0 as labels
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=8)
 
+model = RandomForestClassifier()
+trained_model = model.fit(X_train, y_train)
 
-models = {}
+# --- Save the model ---
+model_path = 'RandomForest_environmentMonitoring_profile.pkl'
+with open(model_path, 'wb') as f:
+    pickle.dump(trained_model, f)
 
-#     # Random Forest
-models['Random Forest'] = RandomForestClassifier()
-
-accuracy, precision, recall = {}, {}, {}
-for key in models.keys():
-    print(key)
-    # Fit the classifier model
-    if os.path.exists('./' + key.replace(" ", '') + str(i) +'_' + 'profile' + '.pkl'):
-        os.remove('./' + key.replace(" ", '') + str(i) + '_' + 'profile' + '.pkl')
-    trained_model = models[key].fit(X_train, y_train)
-    with open(key.replace(" ", '') + str(i) + '_' + 'profile' + '.pkl', 'wb') as f:
-        pickle.dump(trained_model, f)
-
+print(f"Model saved to {model_path}")
 print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+
+# models = {}
+
+# #     # Random Forest
+# models['Random Forest'] = RandomForestClassifier()
+
+# # accuracy, precision, recall = {}, {}, {}
+# # for key in models.keys():
+# #     print(key)
+# #     # Fit the classifier model
+# #     if os.path.exists('./' + key.replace(" ", '') + str(i) +'_' + 'profile' + '.pkl'):
+# #         os.remove('./' + key.replace(" ", '') + str(i) + '_' + 'profile' + '.pkl')
+# #     trained_model = models[key].fit(X_train, y_train)
+# #     with open(key.replace(" ", '') + str(i) + '_' + 'profile' + '.pkl', 'wb') as f:
+# #         pickle.dump(trained_model, f)
+
+# print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
 #clf = RandomForestClassifier(n_estimators=10)
 
