@@ -15,10 +15,23 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 
 start_time = time.time()
-df = pd.read_csv('pptp.csv')
-df = df.drop(columns=['SourceIP', 'DestinationIP'])
-df = df.dropna()
+df = pd.read_csv('Dataset/environmentMonitoring.csv/environmentMonitoring.csv')
 print(df.head())
+
+# Rename columns to match model expectations
+df = df.rename(columns={
+    'frame.len': 'Length',
+    'tcp.dstport': 'DestinationPort',
+    'tcp.flags': 'FlagValue',
+    'label': 'Label',
+    'class': 'Device_name',
+    'ip.src': 'SourceIP',
+    'ip.dst': 'DestinationIP',
+})
+
+# Drop unused columns
+df = df.drop(columns=['SourceIP', 'DestinationIP', 'Device_name'], errors='ignore')
+df = df.dropna()
 
 #changing non numerical data to numerical data
 
@@ -58,15 +71,17 @@ X = df[['DestinationPort', 'Length', 'FlagValue']]
 X = X.values
 print(X)
 
-class_labels = {0: "anomaly", 1: "huebulb" , 2: "wemoinsight", 3: "netgeararlo", 4:"tplinkswitch", 5: "tplinkbulb", 6: "dlinkswitch" , 7:"wemoswitch", 8:"dlinkalarm", 9:"tplinkplug",10: "lifxbulb", 11: "ringalarm", 15: "interaction"} #pingpong
-#class_labels = {0: "anomaly", 1: "Plug1", 2: "plug2", 3: "bulb1", 4:"Plug3", 5:"Multiplug", 6:"kettle", 7: 'thermostat', 8: 'bulb2', 9:'plugwm' }
-#class_labels = {0: "anomaly", 1: "bulb1" , 2: "brewer", 3: "firetv", 4:"kettle", 5: "Sthub", 6: "echodot" , 7:"wemoplug", 8:"tplinkbulb", 9:"tplinkplug",10: "dryer", 11: "philipbulb", 12: "nest"} #moniot
+# Class labels for environmentMonitoring data
+class_labels = {0: "normal", 1: "environmental_sensor"}
+# Alternative labels if needed:
+#class_labels = {0: "anomaly", 1: "huebulb" , 2: "wemoinsight", 3: "netgeararlo", 4:"tplinkswitch", 5: "tplinkbulb", 6: "dlinkswitch" , 7:"wemoswitch", 8:"dlinkalarm", 9:"tplinkplug",10: "lifxbulb", 11: "ringalarm", 15: "interaction"} #pingpong
 #fig = plt.figure()
 #ax = fig.add_subplot(111)
 b = np.random.randint(0, 1000, size=20)
 print(b)
 
-with open('RandomForest'+ '_' + 'profiles'+'pingpong' + '.pkl', 'rb') as f:
+# Load the model trained by trainandtest.py
+with open('KNeighbor' + '_' + 'profiles' + 'MonIoT' + '.pkl', 'rb') as f:
     clf = pickle.load(f)
 
 x = 0

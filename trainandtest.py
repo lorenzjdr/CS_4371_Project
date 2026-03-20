@@ -27,11 +27,23 @@ from sklearn.neighbors import KNeighborsClassifier
 
 start_time = time.time()
 
-#df = pd.read_csv('testbedtt.csv')
-#df = pd.read_csv('MonIoT.csv')
-df = pd.read_csv('pptp.csv')
+# Load healthcare/environmentMonitoring data
+df = pd.read_csv('Dataset/environmentMonitoring.csv/environmentMonitoring.csv')
 print(df.head())
-df = df.drop(columns=['SourceIP', 'DestinationIP'])
+
+# Rename columns to match model expectations
+df = df.rename(columns={
+    'frame.len': 'Length',
+    'tcp.dstport': 'DestinationPort',
+    'tcp.flags': 'FlagValue',
+    'label': 'Label',
+    'class': 'Device_name',
+    'ip.src': 'SourceIP',
+    'ip.dst': 'DestinationIP',
+})
+
+# Drop unused columns
+df = df.drop(columns=['SourceIP', 'DestinationIP', 'Device_name'], errors='ignore')
 df = df.dropna()
 #changing non numerical data to numerical data
 
