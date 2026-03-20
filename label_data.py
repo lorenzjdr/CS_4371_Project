@@ -4,6 +4,85 @@ Devices are identified through unique IP addresses and MQTT client IDs.
 """
 
 import pandas as pd
+from collections import defaultdict
+
+def identify_devices(env_df, attack_df=None):
+    """
+    Identify unique devices from network traffic data.
+    
+    Args:
+        env_df: Environment (normal) dataset DataFrame
+        attack_df: Optional attack dataset DataFrame for verification
+        
+    Returns:
+        device_mapping: Dictionary mapping IP addresses to device labels
+        device_stats: Statistics about each device
+    """
+    
+    # Get unique source IPs (excluding the gateway 10.5.126.84)
+    unique_ips = env_df['ip.src'].unique()
+    unique_ips = sorted([ip for ip in unique_ips if ip != '10.5.126.84'])
+    
+    print(f"\n{'='*80}")
+    print(f"DEVICE IDENTIFICATION & LABELING")
+    print(f"{'='*80}")
+    print(f"\nFound {len(unique_ips)} unique devices (excluding gateway 10.5.126.84)")
+    print(f"Gateway IP: 10.5.126.84\n")
+    
+    # Assign labels to devices
+    # With 2 beds and 10 devices per bed (9 sensors + 1 control unit)
+    # We expect 20 devices total 
+    # it should be at least 20
+    device_mapping = {}
+    device_stats = defaultdict(lambda: {
+        'mqtt_clientids': set(),
+        'packet_count': 0,
+        'source_ports': set(),
+        'avg_packet_size': 0,
+        'total_bytes': 0
+    })
+    
+    for idx, ip in enumerate(unique_ips):
+        bed_num = (idx // 10) + 1
+        device_num = (idx % 10) + 1
+        
+        # Label control units differently
+        # since they don't provide the device names
+        # we assgin a generic id for them
+        if device_num == 10:
+            device_label = f"Bed{bed_num}-Control-Unit"
+        else:
+            device_label = f"Bed{bed_num}-Device{device_num}"
+        
+        device_mapping[ip] = device_label
+        
+        # Collect stats for this device
+        device_data = env_df[env_df['ip.src'] == ip]
+        device_stats[ip]['packet_count'] = len(device_data)
+        device_stats[ip]['total_bytes'] = device_data['frame.len'].sum()
+        device_stats[ip]['avg_packet_size'] = device_data['frame.len'].mean()
+        
+        # Get MQTT client IDs if available
+        mqtt_ids = device_data['mqtt.clientid'].unique()
+        mqtt_ids = [m for m in mqtt_ids if pd.notna(m) and m != 0]
+        device_stats[ip]['mqtt_clientids'] = mqtt_ids
+        
+        # Get source ports used
+        source_ports = device_data['tcp.srcport'].unique()
+        device_stats[ip]['source_ports'] = sorted(source_ports.tolist())
+    
+    print(f"Device Mapping:")
+    print(f"{'-'*80}")
+    for ip, label in sorted(device_mapping.items(), key=lambda x: (x[1].split('-')[0], x[1])):
+        stats = device_stats[ip]
+        print(f"  {label:30} | IP: {ip:15} | Packets: {stats['packet_count']:6} | "
+              f"Bytes: {stats['total_bytes']:10,.0f}")
+        if stats['mqtt_clientids']:
+            print(f"    {'':30}   MQTT Client IDs: {stats['mqtt_clientids']}")
+    
+    print(f"{'-'*80}\n")
+    
+    return device_mapping, device_stats
 
 def main():
     print("\nLoading environment (normal) dataset...")
@@ -17,6 +96,12 @@ def main():
     except Exception as e:
         print(f"Warning: Could not load attack dataset: {e}")
         attack_df = None
+
+    # Identify devices
+    device_mapping, device_stats = identify_devices(env_df, attack_df)
+
+    print(device_mapping)
+    print(device_stats)
 
 
 if __name__ == '__main__':
