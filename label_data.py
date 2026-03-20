@@ -26,7 +26,7 @@ def identify_devices(env_df, attack_df=None):
     print(f"\n{'='*80}")
     print(f"DEVICE IDENTIFICATION & LABELING")
     print(f"{'='*80}")
-    print(f"\nFound {len(unique_ips)} unique devices (excluding gateway 10.5.126.84)")
+    print(f"\nFound {len(unique_ips)} unique devices (excluding gateway 10.5.126.84)") 
     print(f"Gateway IP: 10.5.126.84\n")
     
     # Assign labels to devices
@@ -42,6 +42,7 @@ def identify_devices(env_df, attack_df=None):
         'total_bytes': 0
     })
     
+    # go through all the unique ip's
     for idx, ip in enumerate(unique_ips):
         bed_num = (idx // 10) + 1
         device_num = (idx % 10) + 1
@@ -84,6 +85,22 @@ def identify_devices(env_df, attack_df=None):
     
     return device_mapping, device_stats
 
+def label_dataset(df, device_mapping):
+    """
+    Add device labels to a dataset based on IP addresses.
+    
+    Args:
+        df: DataFrame with 'ip.src' column
+        device_mapping: Dictionary mapping IPs to device labels
+        
+    Returns:
+        DataFrame with new 'device_label' column
+    """
+
+    df_copy = df.copy()
+    df_copy['device_label'] = df_copy['ip.src'].map(device_mapping)
+    return df_copy
+
 def main():
     print("\nLoading environment (normal) dataset...")
     env_df = pd.read_csv('Dataset/environmentMonitoring.csv') # hardcoded for now
@@ -100,9 +117,11 @@ def main():
     # Identify devices
     device_mapping, device_stats = identify_devices(env_df, attack_df)
 
-    print(device_mapping)
-    print(device_stats)
-
+    #print(device_mapping)
+    #print(device_stats)
+    
+    # Label the environment dataset
+    env_df_labeled = label_dataset(env_df, device_mapping)
 
 if __name__ == '__main__':
     main()
