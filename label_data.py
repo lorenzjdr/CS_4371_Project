@@ -38,7 +38,12 @@ def identify_devices(env_df, attack_df=None, gateway_ip=None):
     # Assign labels to devices
     # With 2 beds and 10 devices per bed (9 sensors + 1 control unit)
     # We expect 20 devices total 
-    # it should be at least 20
+    
+    # NOTE: Bed assignment is based on sequential sorting of IPs
+    # This assumes IoT-Flock assigned sequential IPs within each bed
+    # No bed info is available in the network traffic data itself
+    # (MQTT topics and client IDs are generic/random)
+    
     device_mapping = {}
     device_stats = defaultdict(lambda: {
         'mqtt_clientids': set(),

@@ -31,5 +31,6 @@ Labels datasets — Adds device_label column to environment and attack traffic C
 Compares patterns — Shows normal vs. attack traffic differences per device
 
 #2 train the model to detect anomalies like the research paper
+The goal being generalize the way they trained it and extract data
 
 #3 validate correctness against the attack data
