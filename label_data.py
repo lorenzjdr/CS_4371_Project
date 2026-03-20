@@ -150,7 +150,10 @@ def main():
 
     # Label the environment dataset
     env_df_labeled = label_dataset(env_df, device_mapping)
-
+    # Save labeled environment dataset
+    env_df_labeled.to_csv('Dataset/environmentMonitoring_labeled.csv', index=False)
+    print("Saved labeled environment dataset: Dataset/environmentMonitoring_labeled.csv\n")
+    
     # label attack data as well
     if attack_df is not None:
         attack_df_labeled = analyze_and_save_attack_data(env_df_labeled, attack_df, device_mapping)
