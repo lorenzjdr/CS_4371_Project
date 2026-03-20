@@ -5,6 +5,7 @@ Devices are identified through unique IP addresses and MQTT client IDs.
 
 import pandas as pd
 from collections import defaultdict
+import pickle
 
 def identify_devices(env_df, attack_df=None):
     """
@@ -158,6 +159,10 @@ def main():
     if attack_df is not None:
         attack_df_labeled = analyze_and_save_attack_data(env_df_labeled, attack_df, device_mapping)
         print(attack_df_labeled)
+    # serialize data and saved it 
+    with open('device_mapping.pkl', 'wb') as f:
+        pickle.dump({'device_mapping': device_mapping, 'device_stats': dict(device_stats)}, f)
+    print("Saved device mapping (pickle): device_mapping.pkl\n")
 
 if __name__ == '__main__':
     main()
