@@ -37,6 +37,8 @@ Auto-detects non-numerical features instead of hardcoded hex mappings
 Saves model metadata for later validation
 Works with any labeled CSV that has a class column
 
+We can use [Isolation Forest](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html)   
+
 - [ ] Load the labeled data as a path
 - [ ] Clean the data
   - [ ] Drop rows
@@ -48,3 +50,8 @@ Works with any labeled CSV that has a class column
 - [ ] save model as .pkl
 
 # 3 validate correctness against the attack data
+We need to test the model and it's accuracies against the attack data.
+Since we have 2 data sets we can use either one or both 
+
+# 4 find a way to roll back
+Need help on this 
