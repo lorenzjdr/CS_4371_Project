@@ -20,7 +20,7 @@ The datasets contain network packet captures with features including:
 - **MQTT Layer**: client IDs, topics, message types
 - **Timing**: frame deltas, frame timing information
 
-#1 Label the data correctly (hopefully) so we can train it  
+# 1 Label the data correctly (hopefully) so we can train it  
 ```label_data.py```  
 This file labels IoT devices in network traffic data by their IP addresses. It:
 
@@ -30,7 +30,21 @@ Collects statistics — Packets, bytes, MQTT IDs, and ports for each device
 Labels datasets — Adds device_label column to environment and attack traffic CSVs
 Compares patterns — Shows normal vs. attack traffic differences per device
 
-#2 train the model to detect anomalies like the research paper
-The goal being generalize the way they did it
+# 2 train the model to detect anomalies like the research paper
+The goal being generalize the way they did it.
 
-#3 validate correctness against the attack data
+Auto-detects non-numerical features instead of hardcoded hex mappings
+Saves model metadata for later validation
+Works with any labeled CSV that has a class column
+
+- [ ] Load the labeled data as a path
+- [ ] Clean the data
+  - [ ] Drop rows
+  - [ ] remove rows with Na
+- [ ] Encode non numerical features like they did
+- [ ] split the data
+- [ ] Train models 
+- [ ] evaluate
+- [ ] save model as .pkl
+
+# 3 validate correctness against the attack data
