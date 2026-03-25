@@ -39,19 +39,20 @@ Works with any labeled CSV that has a class column
 
 We can use [Isolation Forest](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html)   
 
-- [ ] Load the labeled data as a path
-- [ ] Clean the data
-  - [ ] Drop rows
-  - [ ] remove rows with Na
+- [x] Load the labeled data as a path
+- [x] Clean the data
+  - [x] Drop rows
+  - [x] remove rows with Na
 - [ ] Encode non numerical features like they did
-- [ ] split the data
-- [ ] Train models 
+- [ ] split the data 
+- [ ] Train models use IsolationForest for anomaly detection
 - [ ] evaluate
-- [ ] save model as .pkl
+- [ ] save model as .pkl to be used for testing
 
 # 3 validate correctness against the attack data
 We need to test the model and it's accuracies against the attack data.
 Since we have 2 data sets we can use either one or both 
+Also need help on this
 
 # 4 find a way to roll back
 Need help on this 
