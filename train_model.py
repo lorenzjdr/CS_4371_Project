@@ -8,6 +8,9 @@ Train an Isolation Forest model to learn what "normal" looks like
 Save the trained model to a .pkl file for use
 '''
 
+# Choose dataset: 'environment', 'patient', or 'both'
+DATASET_CHOICE = 'environment'  # Change this to test different datasets
+
 def load_data():
     #should load the csv file and clean it here
     pass
@@ -25,7 +28,8 @@ def save_models():
     pass 
 
 def main():
-    pass
+    print(f"Using : {DATASET}\n")
+    data = load_data(DATASET)
 
 if __name__ == "__main__":
     main()
