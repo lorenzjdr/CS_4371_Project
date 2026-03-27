@@ -8,6 +8,7 @@ Train an Isolation Forest model to learn what "normal" looks like
 Save the trained model to a .pkl file for use
 '''
 import pandas as pd
+from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import LabelEncoder
 
 # Choose dataset: 'environment', 'patient', or 'both'
@@ -62,9 +63,15 @@ def prepare_features(data):
     print(f"Features shape: {X.shape}")
     return X, label_encoders
 
-def train_models():
-    # train selected models
-    pass
+def train_isolation(X):
+    """Train Isolation Forest anomaly detector"""
+    # mark .001% of the data as anomalies. So the model knows what "normal" looks like
+    # assumes that the data set has no anomalies
+    model = IsolationForest(contamination=0.001, random_state=42, n_jobs=-1)
+    model.fit(X)
+    print("Isolation Forest trained")    
+    return model    
+
 
 def save_models():
     # save models 
@@ -74,6 +81,7 @@ def main():
     print(f"Using : {DATASET_CHOICE} .csv\n")
     data = load_data(DATASET_CHOICE)
     X, encoders = prepare_features(data)
+    isolation_forest_model = train_isolation(X)
 
 if __name__ == "__main__":
     main()
