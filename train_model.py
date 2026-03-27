@@ -8,6 +8,7 @@ Train an Isolation Forest model to learn what "normal" looks like
 Save the trained model to a .pkl file for use
 '''
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 
 # Choose dataset: 'environment', 'patient', or 'both'
 DATASET_CHOICE = 'environment'  # Change this to test different datasets
@@ -35,9 +36,31 @@ def load_data(choice):
     print(f"Loaded {len(data)} samples")
     return data
 
-def prepare_features():
-    #split the data into features and targets
-    pass
+def prepare_features(data):
+    """Encode categorical features and return X"""
+    # Drop label columns and non-feature columns
+    X = data.drop(['class', 'label', 'device_label'], axis=1, errors='ignore').copy()
+    
+    # Encode categorical columns
+    label_encoders = {}
+    categorical_cols = X.select_dtypes(include=['object']).columns
+    
+    for col in categorical_cols:
+        le = LabelEncoder()
+        X[col] = X[col].astype(str)
+        X[col] = le.fit_transform(X[col])
+        label_encoders[col] = le
+    
+    # Convert all columns to numeric and handle any remaining objects
+    for col in X.columns:
+        if X[col].dtype == 'object':
+            X[col] = pd.to_numeric(X[col], errors='coerce').fillna(0)
+    
+    # Ensure all columns are numeric
+    X = X.astype(float)
+    
+    print(f"Features shape: {X.shape}")
+    return X, label_encoders
 
 def train_models():
     # train selected models
@@ -50,6 +73,7 @@ def save_models():
 def main():
     print(f"Using : {DATASET_CHOICE} .csv\n")
     data = load_data(DATASET_CHOICE)
+    X, encoders = prepare_features(data)
 
 if __name__ == "__main__":
     main()

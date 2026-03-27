@@ -56,3 +56,5 @@ Also need help on this
 
 # 4 find a way to roll back
 Need help on this 
+
+Train model on normal device behavior, then identify when devices act abnormally
