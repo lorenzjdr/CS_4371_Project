@@ -19,14 +19,14 @@ DATASET_CHOICE = 'environment'  # Change this to test different datasets
 def load_data(choice):
 
     if choice == 'environment':
-        data = pd.read_csv('Dataset/environmentMonitoring_labeled.csv', low_memory=False)
+        data = pd.read_csv('Dataset/environmentMonitoring.csv', low_memory=False)
         print("Loading ENVIRONMENT dataset only")
     elif choice == 'patient':
-        data = pd.read_csv('Dataset/patientMonitoring_labeled.csv', low_memory=False)
+        data = pd.read_csv('Dataset/patientMonitoring.csv', low_memory=False)
         print("Loading PATIENT dataset only")
     elif choice == 'both':
-        env = pd.read_csv('Dataset/environmentMonitoring_labeled.csv', low_memory=False)
-        patient = pd.read_csv('Dataset/patientMonitoring_labeled.csv', low_memory=False)
+        env = pd.read_csv('Dataset/environmentMonitoring.csv', low_memory=False)
+        patient = pd.read_csv('Dataset/patientMonitoring.csv', low_memory=False)
         data = pd.concat([env, patient], ignore_index=True)
         print("Loading BOTH environment and patient datasets")
     else:
