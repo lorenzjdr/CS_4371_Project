@@ -76,7 +76,7 @@ def train_isolation(X):
 def save_model(model, encoders, dataset_choice, model_name):
     """Save model and encoders"""
     
-    with open(model_name + '.pkl', 'wb') as f:
+    with open(model_name + "_" + dataset_choice + '.pkl', 'wb') as f:
         pickle.dump({
             'model': model, 
             'encoders': encoders,
