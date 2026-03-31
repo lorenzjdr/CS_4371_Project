@@ -5,6 +5,7 @@ import os
 DATASET = "../Dataset/environmentMonitoring.csv" #og dataset
 OUTPUT_DATA = "anomaly_datasets3"   #anomaly log
 INTEGRITY_COUNT = 3
+AVAILABILITY_COUNT = 3
 
 # columns that can be corrupted
 Integrity_Columns=[
@@ -17,6 +18,7 @@ os.makedirs(OUTPUT_DATA, exist_ok=True) #create output folder
 df = pd.read_csv(DATASET) #read dataset
 
 df_integrity = df.copy()
+df_availability = df.copy()
 
 #anomaly log
 log_columns = ["dataset_name", "anomaly_type", "row_index", "column", "old_value", "new_value"]
@@ -41,6 +43,16 @@ for i in rows_to_corrupt:
 integrity_file = os.path.join(OUTPUT_DATA, "integrity_dataset3.csv")
 df_integrity.to_csv(integrity_file, index=False)
 
+#AVAILABILITY ANOMALY CREATION
+rows_to_delete = random.sample(range(len(df_availability)), AVAILABILITY_COUNT)
+
+for i in rows_to_delete:
+    log.append(["availability_dataset.csv", "availability", i, "row_deleted", "row_exists", "row_removed"])
+
+df_availability.drop(index=rows_to_delete, inplace=True)
+availability_file = os.path.join(OUTPUT_DATA, "availability_dataset3.csv")
+df_availability.to_csv(availability_file, index=False)
+
 #SAVING
 log_df = pd.DataFrame(log, columns=log_columns)
 log_file = os.path.join(OUTPUT_DATA, "anomaly_log3.csv")
@@ -48,4 +60,5 @@ log_df.to_csv(log_file, index=False)
 
 print("Datasets created and logged successfully!")
 print(f"Integrity anomalies: {integrity_file}")
+print(f"Availability anomalies: {availability_file}")
 print(f"Log file: {log_file}")
