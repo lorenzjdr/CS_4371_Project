@@ -1,0 +1,4 @@
+dataset_name,anomaly_type,row_index,column,old_value,new_value
+integrity_dataset.csv,integrity,22054,tcp.len,11,278
+integrity_dataset.csv,integrity,29788,tcp.len,12,324
+integrity_dataset.csv,integrity,17781,frame.len,72,330
