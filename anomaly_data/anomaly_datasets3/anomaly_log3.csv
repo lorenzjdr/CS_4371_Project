@@ -1,0 +1,7 @@
+dataset_name,anomaly_type,row_index,column,old_value,new_value
+integrity_dataset.csv,integrity,13191,tcp.checksum,0x00001126,0x00001126_CORRUPTED
+integrity_dataset.csv,integrity,25713,tcp.checksum,0x0000413b,0x0000413b_CORRUPTED
+integrity_dataset.csv,integrity,26389,tcp.checksum,0x00004148,0x00004148_CORRUPTED
+availability_dataset.csv,availability,29495,row_deleted,row_exists,row_removed
+availability_dataset.csv,availability,1891,row_deleted,row_exists,row_removed
+availability_dataset.csv,availability,11507,row_deleted,row_exists,row_removed
