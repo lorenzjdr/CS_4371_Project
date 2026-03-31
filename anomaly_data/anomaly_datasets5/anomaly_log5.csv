@@ -1,0 +1,11 @@
+dataset_name,anomaly_type,row_index,column,old_value,new_value
+integrity_dataset.csv,integrity,16721,frame.len,72,656
+integrity_dataset.csv,integrity,30281,mqtt.kalive,0.0,843.0
+integrity_dataset.csv,integrity,814,frame.len,80,89
+integrity_dataset.csv,integrity,19771,tcp.checksum,0x00001117,0x00001117_CORRUPTED
+integrity_dataset.csv,integrity,25090,tcp.window_size_value,512,1452
+availability_dataset.csv,availability,25563,row_deleted,row_exists,row_removed
+availability_dataset.csv,availability,1913,row_deleted,row_exists,row_removed
+availability_dataset.csv,availability,21840,row_deleted,row_exists,row_removed
+availability_dataset.csv,availability,20861,row_deleted,row_exists,row_removed
+availability_dataset.csv,availability,28591,row_deleted,row_exists,row_removed
