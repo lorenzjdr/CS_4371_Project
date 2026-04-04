@@ -1,4 +1,5 @@
 # IoT-anomaly-detector (IoT-AD)
+
 This is the code used for the following publication: H. Zahan, Md W. Al Azad, I. Ali, and S. Mastorakis, "IoT-ad: A framework to detect anomalies among interconnected IoT devices." IEEE Internet of Things Journal, 2023.
 
 This GitHub repository contains a collection of scripts for analyzing device actions in a smart home environment. The scripts are designed to preprocess data, train models, detect anomalies, and rollback device actions if necessary. The following is an overview of the scripts included in this project: 
@@ -19,7 +20,19 @@ This GitHub repository contains a collection of scripts for analyzing device act
 
 **7. Rollback.py:** In the event of detecting interaction anomalies, this script rolls back the device actions to their stable state, ensuring the integrity and security of the smart home environment. 
 
-**Getting Started:**  
+---
+
+## **New Additions:**
+
+We are expanding the scope of this project by testing the original IoT-AD framework against real-world healthcare datasets. This includes data from IoT devices used in healthcare environments, such as patient monitoring systems. The goal is to evaluate whether the original IoT-AD framework holds up in detecting anomalies in these datasets.
+
+Additionally, we are testing the framework against new machine learning models to determine which approach works best for identifying anomalies in the datasets. These models include Random Forest and Isolation Forest.
+
+To facilitate this testing, we have created new datasets with injected anomalies (integrity and availability anomalies). These datasets are used to evaluate the performance of the models in detecting various types of anomalies.
+
+---
+
+## **Getting Started:**  
 
 To use these scripts, follow these steps:  
 
@@ -27,4 +40,4 @@ To use these scripts, follow these steps:
 
 2. Install the necessary dependencies and libraries required for running the scripts.  
 
-3. Run each script in the specified sequence as described above, ensuring the proper data inputs and configuration settings. 
+3. Run each script in the specified sequence as described above, ensuring the proper data inputs and configuration settings.  
