@@ -8,7 +8,7 @@ print(dataset.head())
 print(f"Shape: {dataset.shape}")
 
 #Encoding string columns to nums so Random forest can read them
-srting_cols = ['class', 'device_label']
+srting_cols = ['class']
 for col in srting_cols:
     dataset[col] = LabelEncoder().fit_transform(dataset[col])
 
