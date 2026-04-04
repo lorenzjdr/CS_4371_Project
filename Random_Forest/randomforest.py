@@ -18,3 +18,10 @@ dataset = dataset.drop(columns=drop_cols)
 
 print("Dataset after converting strings to numbers:")
 print(dataset.head())
+
+#separating features and labels
+X = dataset.drop(columns=['label']) #all cols except label is feature
+y = dataset['label'] #this is what we want to predict
+
+print("Features shape:", X.shape)
+print("Labels shape:", y.shape)
