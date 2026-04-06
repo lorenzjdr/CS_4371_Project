@@ -41,7 +41,7 @@ file_pattern_availability = "anomaly_datasets*/availability_dataset*.csv"
 
 model_file = "../models/isolation_forest_model_environment.pkl"
 
-def find_files(pattern : str):
+def predict_anomalies(pattern : str):
     for file_path in root_dir.glob(pattern):
         print(f"Reading file: {file_path.name} from {file_path.parent}")
 
@@ -58,10 +58,21 @@ def find_files(pattern : str):
 
         model = deserialize_model()['model']
 
-        prediction = model.predict(X_predict)
+        predictions = model.predict(X_predict)
+        dataframe['anomaly_prediction'] = predictions
 
-        if any(p == -1 for p in prediction):
-            print(f"⚠️ Issue detected in: {file_path.name}")
+        #Filter anomalies
+        anomalies = dataframe[dataframe['anomaly_prediction'] == -1]
+
+        if not anomalies.empty:
+            print(f"⚠️ {len(anomalies)} anomalies detected in: {file_path.name}")
+
+            #Print specific anomalies line-by-line
+            for index, row in anomalies.iterrows():
+                print(f"Line {index}: Faulty data detected -> {row.to_dict()}")
+        else:
+            print(f"✅ No issues detected in: {file_path.name}")
+
 
 def deserialize_model():
     return joblib.load(model_file) #hardcoded model file path
@@ -106,4 +117,4 @@ def prepare_features(dataframe : pd.DataFrame):
 
 #REMOVE AFTER TESTING
 if __name__ == '__main__':
-    find_files(file_pattern_integrity)
+    predict_anomalies(file_pattern_integrity)
