@@ -3,17 +3,10 @@ CS_4371_Project — CSV Dataset Reader Utilities
 
 Purpose
 -------
-Centralized helpers to load and validate the project's CSV datasets. Import
+Centralized helpers to load the project's CSV datasets. Import
 functions from this module instead of calling `pandas.read_csv` directly so
 that file paths, NA handling, encodings, and date parsing stay consistent
 across the codebase.
-
-Responsibilities
----------------
-- Locate CSV files under `Dataset/` and `anomaly_data/` subdirectories.
-- Read data with common defaults (UTF‑8, standard NA values, safe dtypes).
-- Optionally enforce/validate expected columns and parse timestamps.
-- Offer chunked reads for large files to reduce memory pressure.
 
 Intended usage (examples)
 -------------------------
@@ -33,19 +26,82 @@ for chunk in read_dataset(
 """
 
 #Imports
+import pathlib
+import joblib
 import pandas as pd
 import numpy as np
-import pathlib
+import warnings
+
+warnings.filterwarnings("ignore")
 
 #Constants
 root_dir = pathlib.Path('../anomaly_data/')
 file_pattern_integrity = "anomaly_datasets*/integrity_dataset*.csv"
 file_pattern_availability = "anomaly_datasets*/availability_dataset*.csv"
 
+model_file = "../models/isolation_forest_model_environment.pkl"
+
 def find_files(pattern : str):
     for file_path in root_dir.glob(pattern):
         print(f"Reading file: {file_path.name} from {file_path.parent}")
 
+        try:
+            dataframe = pd.read_csv(file_path, low_memory=False)
+            dataframe.dropna(inplace=True)
+            print(dataframe.head())
+
+        except FileNotFoundError as e:
+            print(f"CSV File Error: {e}")
+            exit(-1)
+
+        X_predict, encoders = prepare_features(dataframe)
+
+        model = deserialize_model()['model']
+
+        prediction = model.predict(X_predict)
+
+        if any(p == -1 for p in prediction):
+            print(f"⚠️ Issue detected in: {file_path.name}")
+
+def deserialize_model():
+    return joblib.load(model_file) #hardcoded model file path
+
+def prepare_features(dataframe : pd.DataFrame):
+    """
+    Prepares the features from the input dataframe for prediction. This function replicates that
+    of the process used during training, ensuring that the same preprocessing steps are applied.
+
+    Args:
+        dataframe (pd.DataFrame): The input dataframe containing raw data for prediction.
+            Expected columns may include 'class', 'label', and 'device_label', which will
+            be excluded from feature preparation.
+
+    Returns:
+        Tuple[pd.DataFrame, Dict[str, LabelEncoder]]: A tuple containing:
+            - A dataframe with features preprocessed and ready for prediction.
+            - A dictionary of encoders used during the preprocessing phase.
+    """
+
+    # Load the saved model and the encoders used during training
+    encoders = deserialize_model().get('encoders', {})
+
+    X_predict = dataframe.drop(['class', 'label', 'device_label'], axis=1, errors='ignore').copy()
+
+    # Encode categorical columns -- apply encoders to new data
+    for col, le in encoders.items():
+        if col in X_predict.columns:
+            X_predict[col] = X_predict[col].astype(str)
+            # Use transform (NOT fit_transform) to maintain consistency with training
+            X_predict[col] = X_predict[col].map(lambda s: le.transform([s])[0] if s in le.classes_ else -1)
+
+    # Convert all columns to numeric and handle any remaining objects
+    for col in X_predict.columns:
+        if X_predict[col].dtype == 'object':
+            X_predict[col] = pd.to_numeric(X_predict[col], errors='coerce').fillna(0)
+
+    X_predict = X_predict.astype(float)
+
+    return X_predict, encoders
 
 
 #REMOVE AFTER TESTING
