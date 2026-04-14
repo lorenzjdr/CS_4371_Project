@@ -28,15 +28,16 @@ log = []
 rows_to_corrupt = random.sample(range(len(df_integrity)), INTEGRITY_COUNT)
 
 for i in rows_to_corrupt:
-    col = random.choice(Integrity_Columns)
-    old_val = df_integrity.loc[i, col]
+    cols_to_corrupt = random.sample(Integrity_Columns, 3)
+    for col in cols_to_corrupt:
+        old_val = df_integrity.loc[i, col]
 
-    if pd.api.types.is_numeric_dtype(df_integrity[col]):
-        new_val = old_val + random.randint(1,1000)
-    else:
-        new_val = str(old_val) + "_CORRUPTED"
+        if pd.api.types.is_numeric_dtype(df_integrity[col]):
+            new_val = int(old_val * random.uniform(5,20))
+        else:
+            new_val = str(old_val) + "_CORRUPTED"
+        df_integrity.loc[i, col]= new_val
 
-    df_integrity.loc[i, col]= new_val
     df_integrity.loc[i, 'label'] =1 #mark as anomaly
     log.append(["integrity_dataset.csv", "integrity", i, col, old_val, new_val])
 
