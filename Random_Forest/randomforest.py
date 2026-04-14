@@ -38,10 +38,19 @@ print("Training label distribution:")
 print(y_train.value_counts())
 
 #training
-rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced') #balanced => penalize misclassifying the minority class (anomalies) to learn to detect them
+
 rf_model.fit(X_train, y_train) #fit the model on training data
 y_pred = rf_model.predict(X_test) #predict on test data to check performance
-print(classification_report(y_test, y_pred))
+
+print("\nClassification report:")
+print(classification_report(y_test, y_pred, target_names=['normal', 'anomaly']))
+
+y_prob = rf_model.predict_proba(X_test)[:,1] #probability of anomaly class
+y_pred_tuned = (y_prob >= 0.3).astype(int)
+
+print("\nClassification report with 0.3 threshold:")
+print(classification_report(y_test, y_pred_tuned, target_names=['normal', 'anomaly']))
 
 # Save the trained model in pkl for later 
 joblib.dump(rf_model, "random_forest.pkl")
