@@ -18,6 +18,11 @@ dataset = dataset.select_dtypes(include=['number'])
 print("Dataset after converting strings to numbers:")
 print(dataset.head())
 
+#check class distribution before training
+print("Label distribution:")
+print(dataset['label'].value_counts())
+print(dataset['label'].value_counts(normalize=True).mul(100).round(2).astype(str)+'%')
+
 #separating features and labels
 X = dataset.drop(columns=['label']) #all cols except label is feature
 y = dataset['label'] #this is what we want to predict
@@ -26,9 +31,11 @@ print("Features shape:", X.shape)
 print("Labels shape:", y.shape)
 
 # split train and test
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
 print("Training samples:", X_train.shape[0])
+print("Training label distribution:")
+print(y_train.value_counts())
 
 #training
 rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
