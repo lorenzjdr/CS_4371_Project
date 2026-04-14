@@ -37,6 +37,7 @@ for i in rows_to_corrupt:
         new_val = str(old_val) + "_CORRUPTED"
 
     df_integrity.loc[i, col]= new_val
+    df_integrity.loc[i, 'label'] =1 #mark as anomaly
     log.append(["integrity_dataset.csv", "integrity", i, col, old_val, new_val])
 
 #save integrity anomaly dataset
@@ -46,10 +47,12 @@ df_integrity.to_csv(integrity_file, index=False)
 #AVAILABILITY ANOMALY CREATION
 rows_to_delete = random.sample(range(len(df_availability)), AVAILABILITY_COUNT)
 
+df_availability.loc[rows_to_delete, 'label']=1 #mark before dropping
+
 for i in rows_to_delete:
     log.append(["availability_dataset.csv", "availability", i, "row_deleted", "row_exists", "row_removed"])
 
-df_availability.drop(index=rows_to_delete, inplace=True)
+#df_availability.drop(index=rows_to_delete, inplace=True)
 availability_file = os.path.join(OUTPUT_DATA, "availability_dataset5.csv")
 df_availability.to_csv(availability_file, index=False)
 

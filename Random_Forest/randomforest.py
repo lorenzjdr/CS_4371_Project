@@ -6,10 +6,16 @@ from sklearn.metrics import classification_report
 import joblib 
 
 #Loading Dataset
-dataset = pd.read_csv("../Dataset/environmentMonitoring.csv")
+dataset = pd.read_csv("../anomaly_data/anomaly_datasets5/availability_dataset5.csv")
 print("Dataset Test:")
 print(dataset.head())
 print(f"Shape: {dataset.shape}")
+
+#checking for labeled anomalies
+df = pd.read_csv('../anomaly_data/anomaly_datasets5/availability_dataset5.csv')
+print('Total rows:', len(df))
+print('Label counts:', df['label'].value_counts())
+print('Any non-zero labels:', (df['label'] != 0).sum())
 
 #Encoding string columns to nums so Random forest can read them
 dataset['class'] = LabelEncoder().fit_transform(dataset['class'])
