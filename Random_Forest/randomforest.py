@@ -3,19 +3,21 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
+from imblearn.over_sampling import SMOTE
 import joblib 
 
 #Loading Dataset
-dataset = pd.read_csv("../anomaly_data/anomaly_datasets5/availability_dataset5.csv")
+dataset = pd.read_csv("../anomaly_data/anomaly_datasets50/integrity_dataset50.csv")
 print("Dataset Test:")
 print(dataset.head())
 print(f"Shape: {dataset.shape}")
 
 #checking for labeled anomalies
-df = pd.read_csv('../anomaly_data/anomaly_datasets5/availability_dataset5.csv')
+df = pd.read_csv('../anomaly_data/anomaly_datasets50/integrity_dataset50.csv')
 print('Total rows:', len(df))
 print('Label counts:', df['label'].value_counts())
 print('Any non-zero labels:', (df['label'] != 0).sum())
+print(df[df['label']==1][['frame.len','tcp.len','tcp.window_size_value']].head(10))
 
 #Encoding string columns to nums so Random forest can read them
 dataset['class'] = LabelEncoder().fit_transform(dataset['class'])
@@ -42,6 +44,12 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 print("Training samples:", X_train.shape[0])
 print("Training label distribution:")
 print(y_train.value_counts())
+
+sm = SMOTE(random_state=42, k_neighbors=3) 
+X_train, y_train = sm.fit_resample(X_train, y_train)
+
+print("After training label distribution:")
+print(pd.Series(y_train).value_counts())
 
 #training
 rf_model = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced') #balanced => penalize misclassifying the minority class (anomalies) to learn to detect them
