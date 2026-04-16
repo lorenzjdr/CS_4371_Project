@@ -1,37 +1,9 @@
-"""
-Generalized Device Interaction Graph
-=====================================
-Builds a device interaction graph from any IoT network traffic CSV.
-
-Each node  = a device, identified by IP address (or MAC if available)
-Each edge  = communication between two devices
-
-Edge features stored per (src, dst) pair:
-  - packet_count   : number of packets exchanged
-  - total_bytes    : sum of frame.len across all packets
-  - avg_bytes      : average frame size
-  - protocols      : set of protocols seen (tcp, mqtt, etc.)
-  - src_ports      : set of source ports used
-  - dst_ports      : set of destination ports used
-  - timestamps     : list of relative timestamps (optional)
-
-Works with any CSV that has at minimum: ip.src, ip.dst
-Optional enrichment columns (used if present, silently ignored if absent):
-  frame.len, ip.proto, tcp.srcport, tcp.dstport,
-  frame.time_relative, mqtt.msgtype, device_label
-"""
-
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import os
 from collections import defaultdict
-
-
-# ---------------------------------------------------------------------------
-# Column name helpers – maps generic roles to whatever the CSV calls them
-# ---------------------------------------------------------------------------
 
 REQUIRED_COLS = {"src": ["ip.src"], "dst": ["ip.dst"]}
 
@@ -45,7 +17,7 @@ OPTIONAL_COLS = {
     "label":      ["device_label"],
 }
 
-PROTO_MAP = {6: "TCP", 17: "UDP", 1: "ICMP"}  # ip.proto numbers → names
+PROTO_MAP = {6: "TCP", 17: "UDP", 1: "ICMP"} 
 
 
 def _find_col(df, candidates):
@@ -63,11 +35,6 @@ def _resolve_cols(df):
         col = _find_col(df, candidates)
         cols[role] = col
     return cols
-
-
-# ---------------------------------------------------------------------------
-# Graph builder
-# ---------------------------------------------------------------------------
 
 def build_graph(df, include_timestamps=False):
     """
@@ -87,7 +54,6 @@ def build_graph(df, include_timestamps=False):
     """
     cols = _resolve_cols(df)
 
-    # Validate required columns
     for role in ("src", "dst"):
         if cols[role] is None:
             raise ValueError(
@@ -98,7 +64,6 @@ def build_graph(df, include_timestamps=False):
     src_col = cols["src"]
     dst_col = cols["dst"]
 
-    # Build optional friendly-name lookup: IP → device_label
     label_lookup = {}
     if cols["label"] is not None:
         tmp = df[[src_col, cols["label"]]].dropna().drop_duplicates()
@@ -106,8 +71,6 @@ def build_graph(df, include_timestamps=False):
 
     G = nx.DiGraph()
 
-    # Accumulate edge stats in plain dicts first (much faster than repeated
-    # graph attribute access for large CSVs)
     edge_data = defaultdict(lambda: {
         "packet_count": 0,
         "total_bytes":  0,
@@ -120,7 +83,6 @@ def build_graph(df, include_timestamps=False):
     node_packets = defaultdict(int)
     node_bytes   = defaultdict(int)
 
-    # Use column index lookups to avoid dot-in-name issues with itertuples
     col_idx = {name: df.columns.get_loc(name) for name in df.columns}
 
     src_idx  = col_idx[src_col]
@@ -131,7 +93,7 @@ def build_graph(df, include_timestamps=False):
     dport_idx = col_idx.get(cols["dst_port"])
     ts_idx    = col_idx.get(cols["timestamp"]) if include_timestamps else None
 
-    arr = df.values  # numpy array for fast row access
+    arr = df.values
 
     for row in arr:
         src = row[src_idx]
@@ -146,7 +108,6 @@ def build_graph(df, include_timestamps=False):
         ed["packet_count"] += 1
         node_packets[src]  += 1
 
-        # bytes
         if byte_idx is not None:
             b = row[byte_idx]
             try:
@@ -156,7 +117,6 @@ def build_graph(df, include_timestamps=False):
             ed["total_bytes"] += b
             node_bytes[src]   += b
 
-        # protocol
         if proto_idx is not None:
             p = row[proto_idx]
             if p is not None and not (isinstance(p, float) and pd.isna(p)):
@@ -165,7 +125,6 @@ def build_graph(df, include_timestamps=False):
                 except (TypeError, ValueError):
                     ed["protocols"].add(str(p))
 
-        # source port
         if sport_idx is not None:
             sp = row[sport_idx]
             if sp is not None and not (isinstance(sp, float) and pd.isna(sp)):
@@ -174,7 +133,6 @@ def build_graph(df, include_timestamps=False):
                 except (TypeError, ValueError):
                     pass
 
-        # destination port
         if dport_idx is not None:
             dp = row[dport_idx]
             if dp is not None and not (isinstance(dp, float) and pd.isna(dp)):
@@ -183,13 +141,11 @@ def build_graph(df, include_timestamps=False):
                 except (TypeError, ValueError):
                     pass
 
-        # timestamp
         if ts_idx is not None:
             ts = row[ts_idx]
             if ts is not None:
                 ed["timestamps"].append(ts)
 
-    # --- Populate graph nodes ---
     all_ips = set(node_packets.keys()) | {k[1] for k in edge_data}
     for ip in all_ips:
         G.add_node(ip,
@@ -197,7 +153,6 @@ def build_graph(df, include_timestamps=False):
                    packet_count=node_packets.get(ip, 0),
                    total_bytes=node_bytes.get(ip, 0))
 
-    # --- Populate graph edges ---
     for (src, dst), ed in edge_data.items():
         pc = ed["packet_count"]
         tb = ed["total_bytes"]
@@ -214,11 +169,6 @@ def build_graph(df, include_timestamps=False):
         G.add_edge(src, dst, **attrs)
 
     return G
-
-
-# ---------------------------------------------------------------------------
-# Loader – accepts a file path or a DataFrame
-# ---------------------------------------------------------------------------
 
 def load_and_build(source, dataset_name="dataset", include_timestamps=False):
     """
@@ -249,11 +199,6 @@ def load_and_build(source, dataset_name="dataset", include_timestamps=False):
     print(f"[{dataset_name}] Nodes: {G.number_of_nodes()}  Edges: {G.number_of_edges()}")
     return G, df
 
-
-# ---------------------------------------------------------------------------
-# Summary printer
-# ---------------------------------------------------------------------------
-
 def print_summary(G, dataset_name=""):
     label = f" [{dataset_name}]" if dataset_name else ""
     print(f"\n{'='*60}")
@@ -262,7 +207,6 @@ def print_summary(G, dataset_name=""):
     print(f"  Nodes (devices) : {G.number_of_nodes()}")
     print(f"  Edges (flows)   : {G.number_of_edges()}")
 
-    # Top talkers by packets sent
     top = sorted(G.nodes(data=True), key=lambda x: x[1].get("packet_count", 0), reverse=True)[:5]
     print(f"\n  Top 5 devices by packets sent:")
     for ip, data in top:
@@ -270,7 +214,6 @@ def print_summary(G, dataset_name=""):
         print(f"    {friendly:35s} packets={data.get('packet_count',0):6d}  "
               f"bytes={data.get('total_bytes',0):10,.0f}")
 
-    # Top edges by packet count
     top_edges = sorted(G.edges(data=True), key=lambda x: x[2].get("packet_count", 0), reverse=True)[:5]
     print(f"\n  Top 5 edges by packet count:")
     for src, dst, data in top_edges:
@@ -281,11 +224,6 @@ def print_summary(G, dataset_name=""):
               f"avg_bytes={data['avg_bytes']}  "
               f"protocols={data['protocols']}")
     print(f"{'='*60}\n")
-
-
-# ---------------------------------------------------------------------------
-# Visualiser
-# ---------------------------------------------------------------------------
 
 def visualize_graph(G, title="Device Interaction Graph", output_path=None,
                     highlight_nodes=None, highlight_color="red"):
@@ -302,21 +240,17 @@ def visualize_graph(G, title="Device Interaction Graph", output_path=None,
     """
     fig, ax = plt.subplots(figsize=(14, 10))
 
-    # Layout – spring works well for moderate-sized graphs
     pos = nx.spring_layout(G, seed=42, k=2.5)
 
-    # Node sizes proportional to packets sent (log-scaled so outliers don't dominate)
     import math
     sizes = []
     for n in G.nodes():
         pc = G.nodes[n].get("packet_count", 1)
         sizes.append(300 + math.log1p(pc) * 120)
 
-    # Node colors
     highlight_nodes = set(highlight_nodes or [])
     colors = [highlight_color if n in highlight_nodes else "#4C9BE8" for n in G.nodes()]
 
-    # Edge widths proportional to packet count (capped)
     max_packets = max((d.get("packet_count", 1) for _, _, d in G.edges(data=True)), default=1)
     edge_widths = [
         1 + 4 * (d.get("packet_count", 1) / max_packets)
@@ -328,16 +262,12 @@ def visualize_graph(G, title="Device Interaction Graph", output_path=None,
                            edge_color="#888888", arrows=True,
                            arrowsize=15, connectionstyle="arc3,rad=0.1", ax=ax)
 
-    # Labels: use friendly device_label if available, otherwise IP
     labels = {n: G.nodes[n].get("label", n) for n in G.nodes()}
-    # Shorten long labels for readability
     labels = {n: (v if len(v) <= 20 else v[:17] + "…") for n, v in labels.items()}
     nx.draw_networkx_labels(G, pos, labels=labels, font_size=7, ax=ax)
 
     ax.set_title(title, fontsize=14, fontweight="bold")
     ax.axis("off")
-
-    # Legend
     patches = [mpatches.Patch(color="#4C9BE8", label="Normal device")]
     if highlight_nodes:
         patches.append(mpatches.Patch(color=highlight_color, label="Highlighted device"))
@@ -349,11 +279,6 @@ def visualize_graph(G, title="Device Interaction Graph", output_path=None,
         print(f"  Saved graph image: {output_path}")
     plt.show()
     plt.close()
-
-
-# ---------------------------------------------------------------------------
-# Comparison helper
-# ---------------------------------------------------------------------------
 
 def compare_graphs(G_clean, G_anomaly, label_clean="Clean", label_anomaly="Anomaly"):
     """
@@ -390,7 +315,6 @@ def compare_graphs(G_clean, G_anomaly, label_clean="Clean", label_anomaly="Anoma
     if missing_edges:
         print(f"  MISSING edges (gone in anomaly): {missing_edges}")
 
-    # Edges with significantly changed packet count (>50% shift)
     changed = []
     for src, dst in clean_edges & anomaly_edges:
         c_count = G_clean[src][dst].get("packet_count", 0)
@@ -408,15 +332,10 @@ def compare_graphs(G_clean, G_anomaly, label_clean="Clean", label_anomaly="Anoma
     print(f"{'='*60}\n")
     return new_nodes, missing_nodes, new_edges, missing_edges
 
-
-# ---------------------------------------------------------------------------
-# Main – test with all three dataset types
-# ---------------------------------------------------------------------------
-
 if __name__ == "__main__":
     import sys
 
-    BASE = "Dataset"  # adjust if running from a different working directory
+    BASE = "Dataset"
 
     datasets = {
         "Clean":        os.path.join(BASE, "environmentMonitoring.csv"),
@@ -433,7 +352,6 @@ if __name__ == "__main__":
         print_summary(G, dataset_name=name)
         graphs[name] = G
 
-    # Visualize each graph
     os.makedirs("graph_output", exist_ok=True)
     for name, G in graphs.items():
         visualize_graph(
@@ -442,7 +360,6 @@ if __name__ == "__main__":
             output_path=f"graph_output/{name.lower()}_graph.png"
         )
 
-    # Compare clean vs anomaly datasets
     if "Clean" in graphs and "Integrity" in graphs:
         compare_graphs(graphs["Clean"], graphs["Integrity"],
                        label_clean="Clean", label_anomaly="Integrity")
