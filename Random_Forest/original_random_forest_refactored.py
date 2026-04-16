@@ -6,7 +6,7 @@ from sklearn.metrics import classification_report
 import joblib 
 
 #Loading Dataset
-dataset = pd.read_csv("../Dataset/environmentMonitoring.csv")
+dataset = pd.read_csv("Dataset/environmentMonitoring.csv")
 print("Dataset Test:")
 print(dataset.head())
 print(f"Shape: {dataset.shape}")
@@ -37,4 +37,4 @@ y_pred = rf_model.predict(X_test) #predict on test data to check performance
 print(classification_report(y_test, y_pred))
 
 # Save the trained model in pkl for later 
-joblib.dump(rf_model, "original_random_forest.pkl")
+joblib.dump(rf_model, "models/original_random_forest.pkl")
