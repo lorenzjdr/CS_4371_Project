@@ -7,13 +7,12 @@ import pandas as pd
 from collections import defaultdict
 import pickle
 
-def identify_devices(env_df, attack_df=None, gateway_ip=None):
+def identify_devices(env_df, gateway_ip=None):
     """
     Identify unique devices from network traffic data.
     
     Args:
         env_df: Environment (normal) dataset DataFrame
-        attack_df: Optional attack dataset DataFrame for verification
         gateway_ip: The gateway IP address
         
     Returns:
@@ -112,34 +111,6 @@ def label_dataset(df, device_mapping):
     df_copy['device_label'] = df_copy['ip.src'].map(device_mapping)
     return df_copy
 
-def analyze_and_save_attack_data(env_df_labeled, attack_df, device_mapping):
-    """
-    Label the attack dataset and compare traffic patterns with normal data.
-    
-    Args:
-        env_df_labeled: Labeled environment (normal) dataset DataFrame
-        attack_df: Attack dataset DataFrame
-        device_mapping: Dictionary mapping IPs to device labels
-    """
-    attack_df_labeled = label_dataset(attack_df, device_mapping)
-    
-    # Compare traffic patterns between normal and attack
-    print(f"\nTraffic Analysis - Normal vs Attack:")
-    print(f"{'-'*80}")
-    for device_label in sorted([x for x in env_df_labeled['device_label'].unique() if pd.notna(x)]):
-        if pd.isna(device_label):
-            continue
-        normal_count = len(env_df_labeled[env_df_labeled['device_label'] == device_label])
-        attack_count = len(attack_df_labeled[attack_df_labeled['device_label'] == device_label])
-        print(f"  {device_label:30} | Normal: {normal_count:6} | Attack: {attack_count:6}")
-    print(f"{'-'*80}\n")
-    
-    # Save labeled attack dataset
-    attack_df_labeled.to_csv('Dataset/Attack_labeled.csv', index=False)
-    print("Saved labeled attack dataset: Dataset/Attack_labeled.csv\n")
-    
-    return attack_df_labeled
-
 def detect_gateway(df):
     """
     Auto-detect the gateway by finding the IP that communicates with the most other devices.
@@ -171,17 +142,9 @@ def main():
     
     # Auto-detect gateway
     gateway_ip = detect_gateway(env_df)
-    
-    try:
-        print("\nLoading attack dataset...")
-        attack_df = pd.read_csv('Dataset/Attack.csv')
-        print(f"Loaded {len(attack_df)} records from attack dataset")
-    except Exception as e:
-        print(f"Warning: Could not load attack dataset: {e}")
-        attack_df = None
 
     # Identify devices
-    device_mapping, device_stats = identify_devices(env_df, attack_df, gateway_ip)
+    device_mapping, device_stats = identify_devices(env_df, gateway_ip)
 
     # Label the environment dataset
     env_df_labeled = label_dataset(env_df, device_mapping)
@@ -189,10 +152,6 @@ def main():
     env_df_labeled.to_csv('Dataset/environmentMonitoring_labeled.csv', index=False)
     print("Saved labeled environment dataset: Dataset/environmentMonitoring_labeled.csv\n")
     
-    # label attack data as well
-    if attack_df is not None:
-        attack_df_labeled = analyze_and_save_attack_data(env_df_labeled, attack_df, device_mapping)
-        print(attack_df_labeled)
     # serialize data and saved it 
     with open('device_mapping.pkl', 'wb') as f:
         pickle.dump({'device_mapping': device_mapping, 'device_stats': dict(device_stats)}, f)
