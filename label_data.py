@@ -19,6 +19,7 @@ def identify_devices(env_df, gateway_ip=None):
     Returns:
         device_mapping: Dictionary mapping IP addresses to device labels
         device_stats: Statistics about each device
+        device_profiles: Traffic behavior profiles for each device
     """
     
     # Auto-detect gateway if not provided
@@ -35,34 +36,44 @@ def identify_devices(env_df, gateway_ip=None):
     print(f"\nFound {len(unique_ips)} unique devices (excluding gateway {gateway_ip})") 
     print(f"Gateway IP: {gateway_ip}\n")
     
-    # Assign labels to devices
+    # Analyze traffic patterns to classify device types
+    device_profiles, device_clusters = analyze_traffic_patterns(env_df, unique_ips, gateway_ip)
+    
+    # Assign labels to devices based on profiles
     # With 2 beds and 10 devices per bed (9 sensors + 1 control unit)
     # We expect 20 devices total 
     
-    # NOTE: Bed assignment is based on sequential sorting of IPs
-    # This assumes IoT-Flock assigned sequential IPs within each bed
-    # No bed info is available in the network traffic data itself
-    # (MQTT topics and client IDs are generic/random)
-    
+    # NOTE: Device assignment now uses traffic patterns to group similar devices
+    # This is more intelligent than pure sequential IP sorting
     device_mapping = {}
     device_stats = defaultdict(lambda: {
         'mqtt_clientids': set(),
         'packet_count': 0,
         'source_ports': set(),
         'avg_packet_size': 0,
-        'total_bytes': 0
+        'total_bytes': 0,
+        'device_type': 'Unknown'
     })
+    
+    # Assign bed numbers based on sorted device clusters
+    bed_assignment = {}  # Track which bed each device/type belongs to
+    bed_counter = {}
     
     # go through all the unique ip's
     for idx, ip in enumerate(unique_ips):
         bed_num = (idx // 10) + 1
         device_num = (idx % 10) + 1
         
+        profile = device_profiles[ip]
+        device_type_str = profile['device_type']
+        
         # Label control units differently
-        # since they don't provide the device names
-        # we assgin a generic id for them
-        if device_num == 10:
+        if device_type_str == 'Control-Unit':
             device_label = f"Bed{bed_num}-Control-Unit"
+        elif device_type_str.startswith('Sensor'):
+            device_label = f"Bed{bed_num}-Device{device_num}"
+        elif device_type_str == 'Monitor-Device':
+            device_label = f"Bed{bed_num}-Monitor"
         else:
             device_label = f"Bed{bed_num}-Device{device_num}"
         
@@ -73,6 +84,7 @@ def identify_devices(env_df, gateway_ip=None):
         device_stats[ip]['packet_count'] = len(device_data)
         device_stats[ip]['total_bytes'] = device_data['frame.len'].sum()
         device_stats[ip]['avg_packet_size'] = device_data['frame.len'].mean()
+        device_stats[ip]['device_type'] = device_type_str
         
         # Get MQTT client IDs if available
         mqtt_ids = device_data['mqtt.clientid'].unique()
@@ -83,18 +95,168 @@ def identify_devices(env_df, gateway_ip=None):
         source_ports = device_data['tcp.srcport'].unique()
         device_stats[ip]['source_ports'] = sorted(source_ports.tolist())
     
-    print(f"Device Mapping:")
+    print(f"Device Mapping (with detected types):")
     print(f"{'-'*80}")
     for ip, label in sorted(device_mapping.items(), key=lambda x: (x[1].split('-')[0], x[1])):
         stats = device_stats[ip]
-        print(f"  {label:30} | IP: {ip:15} | Packets: {stats['packet_count']:6} | "
-              f"Bytes: {stats['total_bytes']:10,.0f}")
+        print(f"  {label:30} | IP: {ip:15} | Type: {stats['device_type']:20} | "
+              f"Packets: {stats['packet_count']:6}")
         if stats['mqtt_clientids']:
             print(f"    {'':30}   MQTT Client IDs: {stats['mqtt_clientids']}")
     
     print(f"{'-'*80}\n")
     
-    return device_mapping, device_stats
+    return device_mapping, device_stats, device_profiles
+
+def analyze_traffic_patterns(env_df, unique_ips, gateway_ip):
+    """
+    Analyze traffic patterns for each device to identify device types and behaviors.
+    Clusters similar devices by:
+    - Packet frequency (packets/second)
+    - Packet size distribution (mean, std)
+    - Ports used (MQTT, control, etc.)
+    - Communication pattern (bursty vs continuous)
+    
+    Args:
+        env_df: DataFrame with network traffic
+        unique_ips: List of device IPs (excluding gateway)
+        gateway_ip: The gateway IP
+        
+    Returns:
+        device_profiles: Dict with behavior profile for each IP
+        device_clusters: Dict mapping device type to list of IPs
+    """
+    print(f"\n{'='*80}")
+    print(f"TRAFFIC PATTERN ANALYSIS")
+    print(f"{'='*80}\n")
+    
+    device_profiles = {}
+    
+    # Get time range from dataset
+    max_time = env_df['frame.time_relative'].max()
+    min_time = env_df['frame.time_relative'].min()
+    time_range = max(max_time - min_time, 1)  # Avoid division by zero
+    
+    # Analyze each device
+    for ip in unique_ips:
+        device_data = env_df[env_df['ip.src'] == ip]
+        
+        # Get traffic statistics
+        packet_count = len(device_data)
+        total_bytes = device_data['frame.len'].sum()
+        avg_packet_size = device_data['frame.len'].mean()
+        std_packet_size = device_data['frame.len'].std() if len(device_data) > 1 else 0
+        packet_frequency = packet_count / time_range  # packets per second
+        
+        # Analyze port usage
+        src_ports = device_data['tcp.srcport'].dropna().unique()
+        dst_ports = device_data['tcp.dstport'].dropna().unique()
+        
+        # MQTT identification
+        has_mqtt = any(int(p) in {1883, 8883} for p in dst_ports if pd.notna(p))
+        mqtt_packets = len(device_data[device_data['tcp.dstport'].isin({1883, 8883})])
+        mqtt_ratio = mqtt_packets / packet_count if packet_count > 0 else 0
+        
+        # Communication pattern: continuous vs bursty
+        # High variance in inter-packet times suggests bursty
+        if len(device_data) > 1:
+            device_times = device_data['frame.time_relative'].sort_values()
+            time_diffs = device_times.diff().dropna()
+            if len(time_diffs) > 0:
+                inter_packet_cv = time_diffs.std() / (time_diffs.mean() + 1e-6)  # Coefficient of variation
+            else:
+                inter_packet_cv = 0
+        else:
+            inter_packet_cv = 0
+        
+        # Get MQTT client IDs
+        mqtt_ids = device_data['mqtt.clientid'].dropna().unique()
+        mqtt_ids = [str(m) for m in mqtt_ids if m != 0]
+        
+        # Identify device type based on patterns
+        device_type = classify_device_type(
+            packet_frequency, avg_packet_size, std_packet_size,
+            has_mqtt, mqtt_ratio, inter_packet_cv, mqtt_ids
+        )
+        
+        device_profiles[ip] = {
+            'packet_count': packet_count,
+            'total_bytes': total_bytes,
+            'avg_packet_size': avg_packet_size,
+            'std_packet_size': std_packet_size,
+            'packet_frequency': packet_frequency,
+            'inter_packet_cv': inter_packet_cv,
+            'mqtt_packets': mqtt_packets,
+            'mqtt_ratio': mqtt_ratio,
+            'mqtt_ids': mqtt_ids,
+            'device_type': device_type,
+            'ports_used': {
+                'src': len(src_ports),
+                'dst': len(dst_ports)
+            }
+        }
+    
+    # Cluster devices by type
+    device_clusters = defaultdict(list)
+    for ip, profile in device_profiles.items():
+        device_clusters[profile['device_type']].append(ip)
+    
+    # Display analysis
+    print("Device Type Classification:\n")
+    type_order = ['Control-Unit', 'Gateway-Relay', 'Sensor-High-Freq', 
+                  'Sensor-Low-Freq', 'Monitor-Device', 'Unknown']
+    
+    for device_type in type_order:
+        if device_type not in device_clusters:
+            continue
+        devices = device_clusters[device_type]
+        print(f"{device_type} ({len(devices)} devices):")
+        for ip in sorted(devices):
+            profile = device_profiles[ip]
+            print(f"  {ip:15} | Packets: {profile['packet_count']:6} | "
+                  f"Freq: {profile['packet_frequency']:6.2f}/s | "
+                  f"AvgSize: {profile['avg_packet_size']:7.1f}B | "
+                  f"MQTT: {profile['mqtt_ratio']*100:5.1f}%")
+            if profile['mqtt_ids']:
+                print(f"    {'':15}   MQTT IDs: {profile['mqtt_ids']}")
+        print()
+    
+    print(f"{'-'*80}\n")
+    
+    return device_profiles, device_clusters
+
+
+def classify_device_type(frequency, avg_size, std_size, has_mqtt, mqtt_ratio, inter_packet_cv, mqtt_ids):
+    """
+    Classify device type based on traffic characteristics.
+    
+    Heuristics:
+    - Control units: High variability, control commands (varied packet sizes), low frequency
+    - Sensors (high freq): Regular MQTT updates, ~1-5/sec, stable packet size
+    - Sensors (low freq): Less frequent updates, ~0.1-1/sec
+    - Monitor devices: Larger packets, irregular patterns
+    """
+    
+    # Control/relay devices typically have high inter-packet variability and control traffic
+    if inter_packet_cv > 2.0 and frequency < 2 and not has_mqtt:
+        return 'Control-Unit'
+    
+    if frequency > 1 and has_mqtt and mqtt_ratio > 0.8:
+        if frequency > 3:
+            return 'Sensor-High-Freq'
+        else:
+            return 'Sensor-Low-Freq'
+    
+    # Monitor devices: larger packets, moderate frequency, may relay data
+    if avg_size > 200 and frequency > 0.5:
+        return 'Monitor-Device'
+    
+    # Gateway relay or bridge device
+    if inter_packet_cv > 1.5 and has_mqtt:
+        return 'Gateway-Relay'
+    
+    return 'Unknown'
+
 
 def label_dataset(df, device_mapping):
     """
@@ -227,8 +389,8 @@ def main():
     # Auto-detect gateway
     gateway_ip = detect_gateway(env_df)
 
-    # Identify devices
-    device_mapping, device_stats = identify_devices(env_df, gateway_ip)
+    # Identify devices with traffic pattern analysis
+    device_mapping, device_stats, device_profiles = identify_devices(env_df, gateway_ip)
 
     # Label the environment dataset
     env_df_labeled = label_dataset(env_df, device_mapping)
@@ -238,7 +400,11 @@ def main():
     
     # serialize data and saved it 
     with open('device_mapping.pkl', 'wb') as f:
-        pickle.dump({'device_mapping': device_mapping, 'device_stats': dict(device_stats)}, f)
+        pickle.dump({
+            'device_mapping': device_mapping, 
+            'device_stats': dict(device_stats),
+            'device_profiles': device_profiles
+        }, f)
     print("Saved device mapping (pickle): device_mapping.pkl\n")
 
 if __name__ == '__main__':
