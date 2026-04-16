@@ -10,14 +10,14 @@ import numpy as np
 
 def identify_devices(env_df, gateway_ip=None):
     """
-    Identify unique devices from network traffic data.
+    Identify unique devices from network traffic data using smart clustering and labeling.
     
     Args:
         env_df: Environment (normal) dataset DataFrame
         gateway_ip: The gateway IP address
         
     Returns:
-        device_mapping: Dictionary mapping IP addresses to device labels
+        device_mapping: Dictionary mapping IP addresses to intelligent labels
         device_stats: Statistics about each device
         device_profiles: Traffic behavior profiles for each device
     """
@@ -39,52 +39,33 @@ def identify_devices(env_df, gateway_ip=None):
     # Analyze traffic patterns to classify device types
     device_profiles, device_clusters = analyze_traffic_patterns(env_df, unique_ips, gateway_ip)
     
-    # Assign labels to devices based on profiles
-    # With 2 beds and 10 devices per bed (9 sensors + 1 control unit)
-    # We expect 20 devices total 
+    # Cluster similar devices by traffic behavior
+    similarity_clusters, cluster_info = cluster_similar_devices(device_profiles)
     
-    # NOTE: Device assignment now uses traffic patterns to group similar devices
-    # This is more intelligent than pure sequential IP sorting
-    device_mapping = {}
+    # Generate smart labels using MQTT IDs and clustering
+    device_mapping = generate_smart_labels(device_profiles, similarity_clusters, cluster_info)
+    
+    # Collect detailed statistics
     device_stats = defaultdict(lambda: {
         'mqtt_clientids': set(),
         'packet_count': 0,
         'source_ports': set(),
         'avg_packet_size': 0,
         'total_bytes': 0,
-        'device_type': 'Unknown'
+        'device_type': 'Unknown',
+        'label': 'Unknown'
     })
     
-    # Assign bed numbers based on sorted device clusters
-    bed_assignment = {}  # Track which bed each device/type belongs to
-    bed_counter = {}
-    
-    # go through all the unique ip's
-    for idx, ip in enumerate(unique_ips):
-        bed_num = (idx // 10) + 1
-        device_num = (idx % 10) + 1
-        
+    # go through all the unique ip's and compile stats
+    for ip in unique_ips:
         profile = device_profiles[ip]
-        device_type_str = profile['device_type']
         
-        # Label control units differently
-        if device_type_str == 'Control-Unit':
-            device_label = f"Bed{bed_num}-Control-Unit"
-        elif device_type_str.startswith('Sensor'):
-            device_label = f"Bed{bed_num}-Device{device_num}"
-        elif device_type_str == 'Monitor-Device':
-            device_label = f"Bed{bed_num}-Monitor"
-        else:
-            device_label = f"Bed{bed_num}-Device{device_num}"
-        
-        device_mapping[ip] = device_label
-        
-        # Collect stats for this device
         device_data = env_df[env_df['ip.src'] == ip]
         device_stats[ip]['packet_count'] = len(device_data)
         device_stats[ip]['total_bytes'] = device_data['frame.len'].sum()
         device_stats[ip]['avg_packet_size'] = device_data['frame.len'].mean()
-        device_stats[ip]['device_type'] = device_type_str
+        device_stats[ip]['device_type'] = profile['device_type']
+        device_stats[ip]['label'] = device_mapping[ip]
         
         # Get MQTT client IDs if available
         mqtt_ids = device_data['mqtt.clientid'].unique()
@@ -95,14 +76,19 @@ def identify_devices(env_df, gateway_ip=None):
         source_ports = device_data['tcp.srcport'].unique()
         device_stats[ip]['source_ports'] = sorted(source_ports.tolist())
     
-    print(f"Device Mapping (with detected types):")
+    # Display final mapping
+    print(f"Final Device Mapping (IP -> Smart Label):")
     print(f"{'-'*80}")
-    for ip, label in sorted(device_mapping.items(), key=lambda x: (x[1].split('-')[0], x[1])):
+    
+    # Sort by label for better display
+    sorted_entries = sorted(device_mapping.items(), key=lambda x: x[1])
+    for ip, label in sorted_entries:
         stats = device_stats[ip]
-        print(f"  {label:30} | IP: {ip:15} | Type: {stats['device_type']:20} | "
-              f"Packets: {stats['packet_count']:6}")
+        print(f"  {label:35} | IP: {ip:15} | Packets: {stats['packet_count']:6} | "
+              f"Type: {stats['device_type']:15}")
         if stats['mqtt_clientids']:
-            print(f"    {'':30}   MQTT Client IDs: {stats['mqtt_clientids']}")
+            mqtt_sample = stats['mqtt_clientids'][0][:20]
+            print(f"    {'':35}   MQTT: {mqtt_sample}...")
     
     print(f"{'-'*80}\n")
     
@@ -256,6 +242,166 @@ def classify_device_type(frequency, avg_size, std_size, has_mqtt, mqtt_ratio, in
         return 'Gateway-Relay'
     
     return 'Unknown'
+
+
+def cluster_similar_devices(device_profiles):
+    """
+    Cluster devices by similarity using traffic characteristics.
+    Devices with similar packet frequency, size, and MQTT patterns are grouped.
+    
+    Args:
+        device_profiles: Dict with behavior profiles for each IP
+        
+    Returns:
+        clusters: Dict mapping cluster_id to list of IPs in that cluster
+        cluster_info: Dict with cluster characteristics
+    """
+    print(f"\n{'='*80}")
+    print(f"DEVICE CLUSTERING (Traffic-Based Similarity)")
+    print(f"{'='*80}\n")
+    
+    clusters = defaultdict(list)
+    cluster_info = {}
+    cluster_counter = 0
+    
+    # Sort IPs once for consistent processing
+    sorted_ips = sorted(device_profiles.keys())
+    assigned = set()
+    
+    for ip in sorted_ips:
+        if ip in assigned:
+            continue
+        
+        profile = device_profiles[ip]
+        cluster_ips = [ip]
+        assigned.add(ip)
+        
+        # Find similar devices
+        for other_ip in sorted_ips:
+            if other_ip in assigned or other_ip == ip:
+                continue
+            
+            other_profile = device_profiles[other_ip]
+            
+            # Similarity metrics
+            freq_diff = abs(profile['packet_frequency'] - other_profile['packet_frequency'])
+            size_diff = abs(profile['avg_packet_size'] - other_profile['avg_packet_size'])
+            mqtt_match = profile['mqtt_ratio'] == other_profile['mqtt_ratio']
+            
+            # Group if within thresholds
+            if freq_diff < 0.3 and size_diff < 5 and mqtt_match:
+                cluster_ips.append(other_ip)
+                assigned.add(other_ip)
+        
+        # Store cluster
+        cluster_id = f"C{cluster_counter}"
+        clusters[cluster_id] = cluster_ips
+        
+        avg_freq = np.mean([device_profiles[ip]['packet_frequency'] for ip in cluster_ips])
+        avg_size = np.mean([device_profiles[ip]['avg_packet_size'] for ip in cluster_ips])
+        mqtt_pct = device_profiles[cluster_ips[0]]['mqtt_ratio'] * 100
+        
+        cluster_info[cluster_id] = {
+            'size': len(cluster_ips),
+            'avg_frequency': avg_freq,
+            'avg_packet_size': avg_size,
+            'mqtt_usage': mqtt_pct
+        }
+        
+        cluster_counter += 1
+    
+    # Display clusters
+    print("Device Clusters (similar traffic patterns):\n")
+    for cluster_id in sorted(clusters.keys()):
+        info = cluster_info[cluster_id]
+        ips = clusters[cluster_id]
+        print(f"{cluster_id}: {len(ips)} device(s)")
+        print(f"  Freq: {info['avg_frequency']:.2f}/s, Size: {info['avg_packet_size']:.1f}B, "
+              f"MQTT: {info['mqtt_usage']:.0f}%")
+        for ip in sorted(ips):
+            mqtt_ids = device_profiles[ip]['mqtt_ids'][:1]  # Show first MQTT ID
+            mqtt_str = f" [{mqtt_ids[0][:16]}...]" if mqtt_ids else ""
+            print(f"  {ip:15}{mqtt_str}")
+        print()
+    
+    print(f"{'-'*80}\n")
+    
+    return clusters, cluster_info
+
+
+def generate_smart_labels(device_profiles, clusters, cluster_info):
+    """
+    Generate intelligent device labels combining MQTT IDs and traffic patterns.
+    
+    Strategy:
+    - Primary: Use MQTT client IDs if available and meaningful
+    - Fallback: Use cluster-based naming with traffic characteristics
+    - Result: Grouped devices get sequential numbers within their cluster
+    
+    Args:
+        device_profiles: Dict with behavior profiles for each IP
+        clusters: Cluster assignments
+        cluster_info: Cluster characteristics
+        
+    Returns:
+        device_mapping: Dict mapping IP to meaningful label
+    """
+    print(f"\n{'='*80}")
+    print(f"SMART LABEL GENERATION")
+    print(f"{'='*80}\n")
+    
+    device_mapping = {}
+    cluster_label_counters = defaultdict(int)
+    
+    # Define cluster type based on characteristics
+    def get_cluster_type(info):
+        freq = info['avg_frequency']
+        size = info['avg_packet_size']
+        mqtt = info['mqtt_usage']
+        
+        if mqtt == 0:
+            return 'Relay'
+        elif freq > 1.0:
+            return 'HighFreq-Sensor'
+        elif size < 80:
+            return 'Sensor'
+        else:
+            return 'Monitor'
+    
+    # Assign labels within each cluster
+    for cluster_id in sorted(clusters.keys()):
+        info = cluster_info[cluster_id]
+        cluster_type = get_cluster_type(info)
+        ips = clusters[cluster_id]
+        
+        for ip in sorted(ips):
+            profile = device_profiles[ip]
+            device_num = cluster_label_counters[cluster_type] + 1
+            cluster_label_counters[cluster_type] = device_num
+            
+            # Try to extract info from MQTT client ID
+            mqtt_ids = profile['mqtt_ids']
+            if mqtt_ids and mqtt_ids[0] != '0':
+                # Use hash of MQTT ID for uniqueness
+                mqtt_hash = str(abs(hash(mqtt_ids[0])) % 1000)
+                device_label = f"{cluster_type}-{mqtt_hash}"
+            else:
+                # Fallback to cluster-based naming
+                device_label = f"{cluster_type}-{device_num}"
+            
+            device_mapping[ip] = device_label
+    
+    # Display mapping
+    print("Generated Labels (IP -> Label):\n")
+    for ip in sorted(device_mapping.keys()):
+        label = device_mapping[ip]
+        profile = device_profiles[ip]
+        mqtt_id = profile['mqtt_ids'][0][:20] if profile['mqtt_ids'] else 'N/A'
+        print(f"  {ip:15} -> {label:30} [MQTT: {mqtt_id}]")
+    
+    print(f"\n{'-'*80}\n")
+    
+    return device_mapping
 
 
 def label_dataset(df, device_mapping):
