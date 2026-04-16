@@ -6,6 +6,7 @@ Devices are identified through unique IP addresses and MQTT client IDs.
 import pandas as pd
 from collections import defaultdict
 import pickle
+import numpy as np
 
 def identify_devices(env_df, gateway_ip=None):
     """
@@ -113,26 +114,109 @@ def label_dataset(df, device_mapping):
 
 def detect_gateway(df):
     """
-    Auto-detect the gateway by finding the IP that communicates with the most other devices.
-    The gateway is the central hub that all IoT devices connect to.
+    Intelligently detect the gateway using multiple signals:
+    1. Bidirectional communication (both source and destination traffic)
+    2. Common IoT ports (1883 for MQTT, 5555 for control, etc.)
+    3. Hub-like connectivity pattern (communicates with many devices)
     
     Args:
-        df: DataFrame with 'ip.src' and 'ip.dst' columns
+        df: DataFrame with 'ip.src', 'ip.dst', 'tcp.dstport' columns
         
     Returns:
         gateway_ip: The detected gateway IP address
     """
-    # Count how many unique IPs connect TO each IP (as destination)
-    ip_connectivity = df['ip.dst'].value_counts()
+    MQTT_PORTS = {1883, 8883}  # MQTT standard ports
+    CONTROL_PORTS = {5555, 9090, 8080, 8000}  # Common control ports
+    IOT_PORTS = MQTT_PORTS | CONTROL_PORTS
     
-    # Count unique source IPs for each destination IP
-    unique_sources_per_dest = df.groupby('ip.dst')['ip.src'].nunique().sort_values(ascending=False)
+    print(f"\n{'='*80}")
+    print(f"GATEWAY DETECTION (Multi-Signal Analysis)")
+    print(f"{'='*80}\n")
     
-    # The gateway should have connections from many different source IPs
-    gateway_ip = unique_sources_per_dest.idxmax()
-    num_connected_devices = unique_sources_per_dest.max()
+    # Calculate connectivity metrics for each IP
+    inbound_connections = df['ip.dst'].value_counts()  # How many packets TO this IP
+    unique_sources = df.groupby('ip.dst')['ip.src'].nunique()  # Unique sources TO this IP
     
-    print(f"Detected Gateway: {gateway_ip} (connected to {num_connected_devices} unique devices)")
+    outbound_connections = df['ip.src'].value_counts()  # How many packets FROM this IP
+    unique_dests = df.groupby('ip.src')['ip.dst'].nunique()  # Unique destinations FROM this IP
+    
+    # Analyze port usage for each IP (as destination)
+    iot_port_usage = {}
+    for ip in df['ip.dst'].unique():
+        if pd.isna(ip):
+            continue
+        port_data = df[df['ip.dst'] == ip]['tcp.dstport']
+        iot_ports_used = len([p for p in port_data if pd.notna(p) and int(p) in IOT_PORTS])
+        iot_port_usage[ip] = iot_ports_used
+    
+    # Score each candidate
+    candidates = []
+    all_ips = set(df['ip.src'].unique()) | set(df['ip.dst'].unique())
+    all_ips = [ip for ip in all_ips if pd.notna(ip)]
+    
+    for ip in all_ips:
+        score = 0
+        details = []
+        
+        # Signal 1: High inbound connectivity
+        inbound_count = inbound_connections.get(ip, 0)
+        unique_source_count = unique_sources.get(ip, 0)
+        if unique_source_count > 0:
+            score += unique_source_count * 2  # Weight: 2x
+            details.append(f"Inbound from {unique_source_count} devices")
+        
+        # Signal 2: High outbound connectivity
+        outbound_count = outbound_connections.get(ip, 0)
+        unique_dest_count = unique_dests.get(ip, 0)
+        if unique_dest_count > 0:
+            score += unique_dest_count
+            details.append(f"Outbound to {unique_dest_count} destinations")
+        
+        # Signal 3: Uses IoT ports
+        iot_ports = iot_port_usage.get(ip, 0)
+        if iot_ports > 0:
+            score += iot_ports * 3  # Weight: 3x (strong signal)
+            details.append(f"Uses {iot_ports} IoT ports")
+        
+        # Signal 4: Bidirectional communication (implies hub)
+        if unique_source_count > 0 and unique_dest_count > 0:
+            score += 5  # Bonus for bidirectional
+            details.append(f"Bidirectional communication")
+        
+        if score > 0:
+            candidates.append({
+                'ip': ip,
+                'score': score,
+                'inbound_devices': unique_source_count,
+                'outbound_dests': unique_dest_count,
+                'iot_ports_used': iot_ports,
+                'total_packets': inbound_count + outbound_count,
+                'details': details
+            })
+    
+    # Sort by score
+    candidates = sorted(candidates, key=lambda x: x['score'], reverse=True)
+    
+    # Display top candidates
+    print(f"Gateway Candidates (ranked by likelihood):\n")
+    for rank, candidate in enumerate(candidates[:5], 1):
+        print(f"{rank}. IP: {candidate['ip']}")
+        print(f"   Score: {candidate['score']} | Packets: {candidate['total_packets']:,}")
+        print(f"   Inbound: {candidate['inbound_devices']} devices | "
+              f"Outbound: {candidate['outbound_dests']} destinations | "
+              f"IoT Ports: {candidate['iot_ports_used']}")
+        for detail in candidate['details']:
+            print(f"   * {detail}")
+        print()
+    
+    # Select top candidate
+    if not candidates:
+        raise ValueError("No gateway candidates found!")
+    
+    gateway_ip = candidates[0]['ip']
+    print(f"{'-'*80}")
+    print(f"Selected Gateway: {gateway_ip}\n")
+    
     return gateway_ip
 
 def main():
