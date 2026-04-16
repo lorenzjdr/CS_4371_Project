@@ -6,21 +6,23 @@ from sklearn.metrics import classification_report
 import joblib 
 
 #Loading Dataset
-dataset = pd.read_csv("Dataset/environmentMonitoring.csv")
+dataset = pd.read_csv("Dataset/environmentMonitoring_labeled.csv")
 print("Dataset Test:")
 print(dataset.head())
 print(f"Shape: {dataset.shape}")
 
 #Encoding string columns to nums so Random forest can read them
 dataset['class'] = LabelEncoder().fit_transform(dataset['class'])
+device_label_encoder = LabelEncoder()
+dataset['device_label'] = device_label_encoder.fit_transform(dataset['device_label'].fillna('Unknown'))
 dataset = dataset.select_dtypes(include=['number'])
 
 print("Dataset after converting strings to numbers:")
 print(dataset.head())
 
 #separating features and labels
-X = dataset.drop(columns=['label']) #all cols except label is feature
-y = dataset['label'] #this is what we want to predict
+X = dataset[['tcp.dstport', 'frame.len', 'tcp.flags']] #same features as DeviceProfileTrain
+y = dataset['device_label'] #this is what we want to predict - device type 
 
 print("Features shape:", X.shape)
 print("Labels shape:", y.shape)
