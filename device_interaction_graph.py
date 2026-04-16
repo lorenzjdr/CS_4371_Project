@@ -226,10 +226,10 @@ def print_summary(G, dataset_name=""):
     print(f"{'='*60}\n")
 
 def visualize_graph(G, title="Device Interaction Graph", output_path=None,
-                    highlight_nodes=None, highlight_color="red"):
+                    highlight_nodes=None, highlight_color="#FF5555"):
     """
     Draw the interaction graph.
-
+ 
     Parameters
     ----------
     G               : nx.DiGraph from build_graph()
@@ -238,48 +238,107 @@ def visualize_graph(G, title="Device Interaction Graph", output_path=None,
     highlight_nodes : set/list of IP addresses to highlight (e.g. anomalous ones)
     highlight_color : color used for highlighted nodes
     """
-    fig, ax = plt.subplots(figsize=(14, 10))
-
-    pos = nx.spring_layout(G, seed=42, k=2.5)
-
     import math
+ 
+    fig, ax = plt.subplots(figsize=(18, 13))
+    fig.patch.set_facecolor("#1a1a2e")
+    ax.set_facecolor("#1a1a2e")
+ 
+    # Identify hub nodes (top 2 by packet count) for special treatment
+    sorted_by_traffic = sorted(G.nodes(data=True),
+                                key=lambda x: x[1].get("packet_count", 0), reverse=True)
+    hub_ips = {n for n, _ in sorted_by_traffic[:2]}
+ 
+    # Use shell layout: hubs in center, others in outer ring
+    if len(G.nodes()) > 2:
+        outer = [n for n in G.nodes() if n not in hub_ips]
+        pos = nx.shell_layout(G, nlist=[list(hub_ips), outer])
+    else:
+        pos = nx.spring_layout(G, seed=42)
+ 
+    # --- Node sizes ---
     sizes = []
     for n in G.nodes():
         pc = G.nodes[n].get("packet_count", 1)
-        sizes.append(300 + math.log1p(pc) * 120)
-
+        if n in hub_ips:
+            sizes.append(2200 + math.log1p(pc) * 200)
+        else:
+            sizes.append(600 + math.log1p(pc) * 80)
+ 
+    # --- Node colors: hub = gold, highlighted = red, normal = steel blue ---
     highlight_nodes = set(highlight_nodes or [])
-    colors = [highlight_color if n in highlight_nodes else "#4C9BE8" for n in G.nodes()]
-
+    colors = []
+    for n in G.nodes():
+        if n in highlight_nodes:
+            colors.append(highlight_color)
+        elif n in hub_ips:
+            colors.append("#FFD700")
+        else:
+            colors.append("#4C9BE8")
+ 
+    # --- Edge colors and widths by packet count ---
     max_packets = max((d.get("packet_count", 1) for _, _, d in G.edges(data=True)), default=1)
-    edge_widths = [
-        1 + 4 * (d.get("packet_count", 1) / max_packets)
-        for _, _, d in G.edges(data=True)
-    ]
-
-    nx.draw_networkx_nodes(G, pos, node_size=sizes, node_color=colors, alpha=0.9, ax=ax)
-    nx.draw_networkx_edges(G, pos, width=edge_widths, alpha=0.5,
-                           edge_color="#888888", arrows=True,
-                           arrowsize=15, connectionstyle="arc3,rad=0.1", ax=ax)
-
+    edge_colors, edge_widths = [], []
+    for _, _, d in G.edges(data=True):
+        ratio = d.get("packet_count", 1) / max_packets
+        edge_widths.append(0.8 + 3.5 * ratio)
+        intensity = int(100 + 155 * ratio)
+        edge_colors.append(f"#{intensity:02x}{min(255, intensity+50):02x}{min(255, intensity+80):02x}")
+ 
+    # Draw edges first (so nodes sit on top)
+    nx.draw_networkx_edges(
+        G, pos,
+        width=edge_widths,
+        edge_color=edge_colors,
+        alpha=0.7,
+        arrows=True,
+        arrowsize=12,
+        connectionstyle="arc3,rad=0.12",
+        ax=ax,
+        min_source_margin=20,
+        min_target_margin=20,
+    )
+ 
+    # Draw nodes
+    nx.draw_networkx_nodes(G, pos, node_size=sizes, node_color=colors,
+                           alpha=0.95, linewidths=1.5,
+                           edgecolors="#ffffff", ax=ax)
+ 
+    # Labels
     labels = {n: G.nodes[n].get("label", n) for n in G.nodes()}
-    labels = {n: (v if len(v) <= 20 else v[:17] + "…") for n, v in labels.items()}
-    nx.draw_networkx_labels(G, pos, labels=labels, font_size=7, ax=ax)
-
-    ax.set_title(title, fontsize=14, fontweight="bold")
+    labels = {n: (v if len(v) <= 18 else v[:15] + "...") for n, v in labels.items()}
+ 
+    hub_labels   = {n: v for n, v in labels.items() if n in hub_ips}
+    other_labels = {n: v for n, v in labels.items() if n not in hub_ips}
+ 
+    nx.draw_networkx_labels(G, pos, labels=hub_labels,
+                            font_size=9, font_color="black",
+                            font_weight="bold", ax=ax)
+    nx.draw_networkx_labels(G, pos, labels=other_labels,
+                            font_size=7.5, font_color="white", ax=ax)
+ 
+    ax.set_title(title, fontsize=16, fontweight="bold", color="white", pad=15)
     ax.axis("off")
-    patches = [mpatches.Patch(color="#4C9BE8", label="Normal device")]
+ 
+    # Legend
+    patches = [
+        mpatches.Patch(color="#FFD700", label="Hub / Gateway (most traffic)"),
+        mpatches.Patch(color="#4C9BE8", label="IoT device"),
+    ]
     if highlight_nodes:
-        patches.append(mpatches.Patch(color=highlight_color, label="Highlighted device"))
-    ax.legend(handles=patches, loc="upper left")
-
+        patches.append(mpatches.Patch(color=highlight_color, label="Anomalous device"))
+    ax.legend(handles=patches, loc="upper left",
+              facecolor="#2a2a4a", edgecolor="#555577",
+              labelcolor="white", fontsize=9)
+ 
     plt.tight_layout()
     if output_path:
-        plt.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.savefig(output_path, dpi=150, bbox_inches="tight",
+                    facecolor=fig.get_facecolor())
         print(f"  Saved graph image: {output_path}")
     plt.show()
     plt.close()
-
+    
 def compare_graphs(G_clean, G_anomaly, label_clean="Clean", label_anomaly="Anomaly"):
     """
     Print a side-by-side comparison of two graphs.
