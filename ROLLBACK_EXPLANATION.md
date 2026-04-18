@@ -38,6 +38,11 @@ This script:
 3. Trains `IsolationForest(contamination=0.001)` — assumes 0.1% of training data might be noise
 4. Saves the model to a `.pkl` file
 
+Three model variants are saved depending on `DATASET_CHOICE`:
+- `isolation_forest_model_environment.pkl` — trained on environment monitoring only
+- `isolation_forest_model_patient.pkl` — trained on patient monitoring only
+- `isolation_forest_model_both.pkl` — trained on both datasets combined
+
 ---
 
 ## Stage 3 — `randomforest.py` (Random Forest)
@@ -51,6 +56,17 @@ Unlike Isolation Forest, it needs labeled data to learn from. It is good at clas
 ## Stage 4 — `detect_and_rollback.py` + `rollback.py`
 
 This is where detection meets response.
+
+### `anomaly_data/anomaly.py` — Synthetic Anomaly Generation
+
+Before detection runs, `anomaly.py` generates two synthetic anomaly datasets from the normal environment data to simulate insider/device-level threats:
+
+- **Integrity anomalies** (`integrity_dataset5.csv`) — a small number of rows have numeric columns (e.g. `frame.len`, `tcp.checksum`) inflated by a random value, simulating a device sending corrupted sensor readings
+- **Availability anomalies** (`availability_dataset5.csv`) — a small number of rows are deleted, simulating packet loss or a device going silent
+
+These datasets contain the real ICU device IPs (`10.5.126.x`) so when anomalies are detected, named bed devices are isolated rather than unknown external nodes.
+
+---
 
 ### `rollback.py` — Two Classes
 
@@ -81,39 +97,58 @@ Bed1-Device2 ──→ Gateway
   - Sets status back to `"active"`
 - All events are written to `rollback_log.json` with timestamps
 
+---
+
 ### `detect_and_rollback.py` — The Runner
 
-1. Loads the trained Isolation Forest model
-2. Loads `device_mapping.pkl` to know which IPs are which devices
-3. Detects the gateway from the environment CSV
-4. Builds the `NetworkGraph` from the device mapping
-5. Loads `Attack_labeled.csv` and prepares its features the same way as training
-6. Runs `model.predict()` — returns `-1` (anomaly) or `1` (normal) per packet
-7. For each anomalous packet's `ip.src`:
-   - If the IP is a known device → isolate it
-   - If the IP is unknown (external attacker) → register it as an `Attacker` node first, then isolate it
-   - Only triggers once per unique IP
+Runs **three sequential scans** against the same `NetworkGraph` and `RollbackManager`, so isolation state accumulates across all scans.
+
+The core detection logic is in `detect_and_isolate()`, which is reused for each scan:
+1. Drops rows missing `ip.src`
+2. Encodes and aligns features to match the model's expected input
+3. Runs `model.predict()` — returns `-1` (anomaly) or `1` (normal) per packet
+4. For each anomalous packet's `ip.src`:
+   - If the IP is a known device → isolate it directly
+   - If the IP is unknown (external attacker) → register it as an `Attacker` node connected to the gateway, then isolate it
+   - Only triggers once per unique IP per scan; already-isolated devices are skipped
+
+**Scan 1 — External Attack Data (`Attack_labeled.csv`)**
+- 80,126 packets, all labeled attack traffic
+- Source IPs are external (`192.168.1.90`, `192.168.1.91`) — not in the device mapping
+- Both are registered as `Attacker` nodes and isolated
+
+**Scan 2 — Integrity Anomalies (`integrity_dataset5.csv`)**
+- ~31,758 packets, mostly normal with 5 corrupted rows injected by `anomaly.py`
+- Source IPs are real ICU devices (`10.5.126.x`) already in the network graph
+- **Limitation:** The Isolation Forest does not reliably detect the injected rows. The corruptions are too subtle (e.g. small numeric offsets, a string suffix) to stand out against the natural variation in 31,758 packets. The model flags 0 of the 5 injected rows and instead flags ~454 natural statistical outliers that already exist in the normal data.
+- The named bed devices isolated in this scan are **false positives**, not the actual corrupted-data sources
+
+**Scan 3 — Availability Anomalies (`availability_dataset5.csv`)**
+- ~31,753 packets (5 rows deleted from the normal dataset)
+- Row deletion is **not directly detectable** by Isolation Forest — the model scores individual rows and cannot observe that rows are missing
+- Any devices flagged here are the same natural outliers as Scan 2; they are skipped as already isolated
 
 ---
 
-## Why 2 Attacker IPs, Not 20 Device IPs?
+## Cascading Isolation Effect
 
-The attack dataset simulates **external attackers** (`192.168.1.90`, `192.168.1.91`) sending malicious packets *into* the ICU network. The legitimate ICU devices (`10.5.126.x`) are not the ones misbehaving — the threat is coming from outside.
-
-If the attack were an **inside threat** (a compromised ICU device acting abnormally), you would see one of the `Bed` devices flagged and isolated instead.
+Because all devices connect through the gateway, isolating the gateway removes its edges to every device. Non-isolated bed devices will show `edges: 0` in the network status after the gateway is isolated, even though they aren't individually flagged. This reflects realistic behavior — a compromised or failed gateway disrupts the entire network.
 
 ---
 
 ## Data Flow Summary
 
 ```
-environmentMonitoring.csv  ──→  train_model.py  ──→  isolation_forest_model.pkl
-                                                              │
-device_mapping.pkl  ─────────────────────────────────────────┤
-                                                              ▼
+environmentMonitoring.csv  ──→  train_model.py  ──→  isolation_forest_model_environment.pkl
+                                                                  │
+anomaly.py  ──→  integrity_dataset5.csv  ───────────────────────┐ │
+            └──→  availability_dataset5.csv  ───────────────────┤ │
+                                                                 │ │
+device_mapping.pkl  ─────────────────────────────────────────┐  │ │
+                                                             ▼  ▼ ▼
 Attack_labeled.csv  ──────────────────────────────→  detect_and_rollback.py
                                                               │
-                                                    model.predict() → anomalous IPs
+                                               detect_and_isolate() × 3 scans
                                                               │
                                                     rollback.trigger(ip)
                                                               │
