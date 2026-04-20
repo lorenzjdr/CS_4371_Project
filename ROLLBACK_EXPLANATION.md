@@ -130,9 +130,11 @@ The core detection logic is in `detect_and_isolate()`, which is reused for each 
 
 ---
 
-## Cascading Isolation Effect
+## Gateway Protection
 
-Because all devices connect through the gateway, isolating the gateway removes its edges to every device. Non-isolated bed devices will show `edges: 0` in the network status after the gateway is isolated, even though they aren't individually flagged. This reflects realistic behavior — a compromised or failed gateway disrupts the entire network.
+The gateway is explicitly excluded from isolation. Because all devices route traffic through the gateway (the MQTT broker), isolating it would sever every device from the network at once — making the rollback response too broad to be useful.
+
+Instead, only individual end devices are isolated when flagged. The gateway stays online throughout all scans so that non-flagged devices can continue communicating normally.
 
 ---
 

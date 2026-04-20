@@ -67,7 +67,7 @@ def prepare_features(df, model_features):
     return X
 
 
-def detect_and_isolate(df, scan_label, model, net_graph, rollback, gateway_ip):
+def detect_and_isolate(df, scan_label, model, net_graph, rollback, gateway_ip, device_mapping=None):
     """
     Run anomaly detection on a DataFrame and trigger rollback for flagged device IPs.
 
@@ -78,6 +78,7 @@ def detect_and_isolate(df, scan_label, model, net_graph, rollback, gateway_ip):
         net_graph: NetworkGraph instance
         rollback: RollbackManager instance
         gateway_ip: Gateway IP for registering unknown attacker nodes
+        device_mapping: Optional dict of {ip: label} used when 'device_label' column is absent
 
     Returns:
         Set of IPs that were isolated during this scan
@@ -104,11 +105,19 @@ def detect_and_isolate(df, scan_label, model, net_graph, rollback, gateway_ip):
         if pd.isna(ip) or ip in triggered:
             continue
 
+        # Never isolate the gateway — doing so would sever all devices at once
+        if ip == gateway_ip:
+            continue
+
         # If the IP is not a known device, register it as an attacker node
-        # connected to the gateway so it can still be isolated
+        # connected to the gateway so it can still be isolated.
+        # Prefer device_mapping lookup over the (potentially absent) device_label column.
         if ip not in net_graph.graph.nodes:
-            device_label = row.get("device_label")
-            device_label = device_label if pd.notna(device_label) else f"Attacker ({ip})"
+            device_label = (device_mapping or {}).get(ip)
+            if device_label is None:
+                device_label = row.get("device_label")
+            if device_label is None or (isinstance(device_label, float) and pd.isna(device_label)):
+                device_label = f"Attacker ({ip})"
             net_graph.add_device(ip, label=device_label)
             net_graph.add_comm_path(ip, gateway_ip)
             net_graph.add_comm_path(gateway_ip, ip)
@@ -153,14 +162,14 @@ def main():
     # --- Scan 1: External attack data ---
     attack_df = pd.read_csv(ATTACK_DATA_PATH, low_memory=False)
     isolated = detect_and_isolate(
-        attack_df, "Scan 1: External Attack Data", model, net_graph, rollback, gateway_ip
+        attack_df, "Scan 1: External Attack Data", model, net_graph, rollback, gateway_ip, device_mapping
     )
     all_isolated |= isolated
 
     # --- Scan 2: Integrity anomaly data (corrupted sensor readings) ---
     integrity_df = pd.read_csv(INTEGRITY_DATA_PATH, low_memory=False)
     isolated = detect_and_isolate(
-        integrity_df, "Scan 2: Integrity Anomalies (corrupted sensor values)", model, net_graph, rollback, gateway_ip
+        integrity_df, "Scan 2: Integrity Anomalies (corrupted sensor values)", model, net_graph, rollback, gateway_ip, device_mapping
     )
     all_isolated |= isolated
 
@@ -171,7 +180,7 @@ def main():
     # injected anomaly itself.
     availability_df = pd.read_csv(AVAILABILITY_DATA_PATH, low_memory=False)
     isolated = detect_and_isolate(
-        availability_df, "Scan 3: Availability Anomalies (row-deletion — limited IF detection)", model, net_graph, rollback, gateway_ip
+        availability_df, "Scan 3: Availability Anomalies (row-deletion — limited IF detection)", model, net_graph, rollback, gateway_ip, device_mapping
     )
     all_isolated |= isolated
 
