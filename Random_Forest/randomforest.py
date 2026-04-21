@@ -20,7 +20,8 @@ print('Any non-zero labels:', (df['label'] != 0).sum())
 print(df[df['label']==1][['frame.len','tcp.len','tcp.window_size_value']].head(10))
 
 #Encoding string columns to nums so Random forest can read them
-dataset['class'] = LabelEncoder().fit_transform(dataset['class'])
+le_class = LabelEncoder()
+dataset['class'] = le_class.fit_transform(dataset['class'])
 dataset = dataset.select_dtypes(include=['number'])
 
 print("Dataset after converting strings to numbers:")
@@ -67,4 +68,9 @@ print("\nClassification report with 0.3 threshold:")
 print(classification_report(y_test, y_pred_tuned, target_names=['normal', 'anomaly']))
 
 # Save the trained model in pkl for later 
-joblib.dump(rf_model, "random_forest.pkl")
+joblib.dump({
+    "model": rf_model,
+    "encoders": {
+        "class": le_class
+    }
+}, "random_forest.pkl")
