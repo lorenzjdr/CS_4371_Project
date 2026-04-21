@@ -42,7 +42,7 @@ file_pattern_availability = "anomaly_datasets*/availability_dataset*.csv"
 output_dir = pathlib.Path("../outputs/")
 output_dir.mkdir(exist_ok=True)
 
-model_file = "../models/og_random_forest.pkl"
+model_file = "../models/isolation_forest_model_environment.pkl"
 
 def predict_anomalies(pattern: str):
     for file_path in root_dir.glob(pattern):
