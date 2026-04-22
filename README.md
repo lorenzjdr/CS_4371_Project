@@ -40,4 +40,53 @@ To use these scripts, follow these steps:
 
 2. Install the necessary dependencies and libraries required for running the scripts.  
 
-3. Run each script in the specified sequence as described above, ensuring the proper data inputs and configuration settings.  
+3. Run each script in the specified sequence as described above, ensuring the proper data inputs and configuration settings.
+
+---
+
+## **Setting Up a Python Virtual Environment**
+
+To keep your dependencies organized and avoid conflicts, it is recommended to use a Python virtual environment.
+
+### 1. Create a Virtual Environment
+
+Open your terminal or command prompt and navigate to the project directory. Run:
+
+```bash
+python -m venv venv
+```
+
+This will create a folder named `venv` in your project directory.
+
+### 2. Activate the Virtual Environment
+
+- **On Windows:**
+	```bash
+	venv\Scripts\activate
+	```
+- **On macOS/Linux:**
+	```bash
+	source venv/bin/activate
+	```
+
+After activation, your terminal prompt should show `(venv)`.
+
+### 3. Install Project Requirements
+
+With the virtual environment activated, install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Deactivate the Virtual Environment
+
+When finished, you can deactivate the environment by running:
+
+```bash
+deactivate
+```
+
+---
+
+**Note:** Always activate the virtual environment before running or developing the project to ensure you are using the correct dependencies.
