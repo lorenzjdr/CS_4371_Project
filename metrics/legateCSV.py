@@ -61,7 +61,6 @@ def predict_anomalies(pattern : str):
         predictions = model.predict(X_predict)
         dataframe['anomaly_prediction'] = predictions
 
-        #Filter anomalies
         anomalies = dataframe[dataframe['anomaly_prediction'] == 1]
 
         if not anomalies.empty:
