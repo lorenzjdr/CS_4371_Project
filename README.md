@@ -1,17 +1,16 @@
 # IoT-anomaly-detector (IoT-AD)
 
-## Project Summary
-
 We are expanding the scope of this project by testing the original IoT-AD framework against real-world healthcare datasets. This includes data from IoT devices used in healthcare environments, such as patient monitoring systems. The goal is to evaluate whether the original IoT-AD framework holds up in detecting anomalies in these datasets.
 
 Additionally, we are testing the framework against new machine learning models to determine which approach works best for identifying anomalies in the datasets. These models include Random Forest and Isolation Forest.
 
 To facilitate this testing, we have created new datasets with injected anomalies (integrity and availability anomalies). These datasets are used to evaluate the performance of the models in detecting various types of anomalies.
 
+### **Required References for assignment** 
 
-refs: H. Zahan, Md W. Al Azad, I. Ali, and S. Mastorakis, "IoT-ad: A framework to detect anomalies among interconnected IoT devices." IEEE Internet of Things Journal, 2023. [Paper](https://arxiv.org/pdf/2306.06764)
+H. Zahan, Md W. Al Azad, I. Ali, and S. Mastorakis, "IoT-ad: A framework to detect anomalies among interconnected IoT devices." IEEE Internet of Things Journal, 2023. [Paper](https://arxiv.org/pdf/2306.06764)  
 
-Isolation Forest reference: Fei Tony Liu, Kai Ming Ting, Zhi-Hua Zhou, "Isolation Forest," 2008. [Original Paper](https://cs.nju.edu.cn/zhouzh/zhouzh.files/publication/icdm08b.pdf)
+Fei Tony Liu, Kai Ming Ting, Zhi-Hua Zhou, "Isolation Forest," 2008. [Paper](https://cs.nju.edu.cn/zhouzh/zhouzh.files/publication/icdm08b.pdf)
 
 
 ## **Setting Up a Python Virtual Environment**
@@ -86,7 +85,7 @@ python train_model.py
 ### 3. Train a Random Forest Classifier
 **File:** `Random_Forest/randomforest.py`
 
-Trains a Random Forest classifier for comparison. Not required for the main anomaly detection pipeline.
+Trains a Random Forest classifier for comparison. 
 
 ```bash
 python Random_Forest/randomforest.py
