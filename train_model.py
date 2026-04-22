@@ -11,6 +11,7 @@ import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import LabelEncoder
 import pickle
+import os
 
 # Choose dataset: 'environment', 'patient', or 'both'
 DATASET_CHOICE = 'environment'  # Change this to test different datasets
@@ -74,16 +75,19 @@ def train_isolation(X):
     return model    
 
 def save_model(model, encoders, dataset_choice, model_name):
-    """Save model and encoders"""
-    
-    with open(model_name + "_" + dataset_choice + '.pkl', 'wb') as f:
+    """Save model and encoders in the models folder"""
+
+    os.makedirs("models", exist_ok=True)
+    file_path = os.path.join("models", f"{model_name}_{dataset_choice}.pkl")
+
+    with open(file_path, 'wb') as f:
         pickle.dump({
-            'model': model, 
+            'model': model,
             'encoders': encoders,
             'dataset': dataset_choice
         }, f)
-    
-    print(f"Model saved to model.pkl (trained on: {dataset_choice})")
+
+    print(f"Model saved to {file_path} (trained on: {dataset_choice})")
 
 def main():
     print(f"Using : {DATASET_CHOICE} .csv\n")
