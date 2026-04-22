@@ -1,26 +1,9 @@
 # IoT-anomaly-detector (IoT-AD)
 
-This is the code used for the following publication: H. Zahan, Md W. Al Azad, I. Ali, and S. Mastorakis, "IoT-ad: A framework to detect anomalies among interconnected IoT devices." IEEE Internet of Things Journal, 2023.
 
-This GitHub repository contains a collection of scripts for analyzing device actions in a smart home environment. The scripts are designed to preprocess data, train models, detect anomalies, and rollback device actions if necessary. The following is an overview of the scripts included in this project: 
 
-**Scripts:** 
+refs: H. Zahan, Md W. Al Azad, I. Ali, and S. Mastorakis, "IoT-ad: A framework to detect anomalies among interconnected IoT devices." IEEE Internet of Things Journal, 2023. [Paper](https://arxiv.org/pdf/2306.06764)
 
-**1. DeviceStateData.py:** This script controls the device actions in a smart home by monitoring and managing the state of devices.  
-
-**2. Preprocess.py:** This script converts pcap files to CSV format, making it easier to analyze the data and extract meaningful information.  
-
-**3. DeviceProfileTrain.py:** In this script, the machine learning model is trained using device action data, and a signature is created for each device's action pattern.  
-
-**4. trainandtest.py:** This script focuses on training the machine learning model using multiple device actions and their interactions. It also includes testing and evaluation of the trained model. 
-
-**5. complexmodel.py:** This script builds a deep learning model that can handle complex interactions and multiple device actions. It trains the model using appropriate data and fine-tunes it for optimal performance.  
-
-**6. validation.py:** Using the trained model, this script performs anomaly detection on device actions. It identifies any unusual or unexpected behavior and flags them as anomalies.  
-
-**7. Rollback.py:** In the event of detecting interaction anomalies, this script rolls back the device actions to their stable state, ensuring the integrity and security of the smart home environment. 
-
----
 
 ## **New Additions:**
 
@@ -29,18 +12,6 @@ We are expanding the scope of this project by testing the original IoT-AD framew
 Additionally, we are testing the framework against new machine learning models to determine which approach works best for identifying anomalies in the datasets. These models include Random Forest and Isolation Forest.
 
 To facilitate this testing, we have created new datasets with injected anomalies (integrity and availability anomalies). These datasets are used to evaluate the performance of the models in detecting various types of anomalies.
-
----
-
-## **Getting Started:**  
-
-To use these scripts, follow these steps:  
-
-1. Clone the repository to your local machine.  
-
-2. Install the necessary dependencies and libraries required for running the scripts.  
-
-3. Run each script in the specified sequence as described above, ensuring the proper data inputs and configuration settings.
 
 ---
 
@@ -86,6 +57,63 @@ When finished, you can deactivate the environment by running:
 ```bash
 deactivate
 ```
+
+---
+
+## **How to Run the Project (Recommended Order)**
+
+Below is the recommended sequence for running the main scripts in this project. This ensures that data is labeled, models are trained, anomalies are generated, and detection/rollback is performed correctly.
+
+### 1. Label the Data
+**File:** `label_data.py`
+
+Labels the environment datasets with device information. This step is required before training or testing models.
+
+```bash
+python label_data.py
+```
+*Outputs labeled CSVs in the `Dataset/` folder.*
+
+### 2. Train the Anomaly Detection Model
+**File:** `train_model.py`
+
+Trains an Isolation Forest model on the labeled environment or patient monitoring data. You can set `DATASET_CHOICE` in the script to `'environment'`, `'patient'`, or `'both'`.
+
+```bash
+python train_model.py
+```
+*Outputs a `.pkl` model file in the `models/` folder.*
+
+### 3. Train a Random Forest Classifier
+**File:** `Random_Forest/randomforest.py`
+
+Trains a Random Forest classifier for comparison. Not required for the main anomaly detection pipeline.
+
+```bash
+python Random_Forest/randomforest.py
+```
+
+### 4. Generate Synthetic Anomalies
+**File:** `anomaly_data/anomaly.py`
+
+Creates synthetic integrity and availability anomalies for testing. Generates new CSVs in `anomaly_data/anomaly_datasets5/`.
+
+```bash
+python anomaly_data/anomaly.py
+```
+
+### 5. Run Detection and Rollback
+**File:** `detect_and_rollback.py`
+
+Runs the trained Isolation Forest model on attack and anomaly datasets, triggering the rollback mechanism for detected anomalies.
+
+```bash
+python detect_and_rollback.py
+```
+
+### 6. Analyze Results and Utilities
+- Use `metrics/legateCSV.py` for batch anomaly prediction and CSV utilities.
+- Use `device_interaction_graph.py` for graph-based analysis and visualization of device interactions.
 
 ---
 
