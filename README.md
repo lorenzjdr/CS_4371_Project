@@ -82,7 +82,7 @@ python label_data.py
 ```
 *Outputs labeled CSVs in the `Dataset/` folder.*
 
-### 2. Train the Anomaly Detection Model
+### 2. Train the Isolation Forest Model
 **File:** `train_model.py`
 
 Trains an Isolation Forest model on the labeled environment or patient monitoring data. You can set `DATASET_CHOICE` in the script to `'environment'`, `'patient'`, or `'both'`.
@@ -101,16 +101,7 @@ Trains a Random Forest classifier for comparison.
 python Random_Forest/randomforest.py
 ```
 
-### 4. Generate Synthetic Anomalies
-**File:** `anomaly_data/anomaly.py`
-
-Creates synthetic integrity and availability anomalies for testing. Generates new CSVs in `anomaly_data/anomaly_datasets5/`.
-
-```bash
-python anomaly_data/anomaly.py
-```
-
-### 5. Run Detection and Rollback
+### 4. Run Detection and Rollback
 **File:** `detect_and_rollback.py`
 
 Runs the trained Isolation Forest model on attack and anomaly datasets, triggering the rollback mechanism for detected anomalies.
@@ -122,6 +113,15 @@ python detect_and_rollback.py
 ### 6. Analyze Results and Utilities
 - Use `metrics/legateCSV.py` for batch anomaly prediction and CSV utilities.
 - Use `device_interaction_graph.py` for graph-based analysis and visualization of device interactions.
+
+###  Optional: Generate Synthetic Anomalies
+**File:** `anomaly_data/anomaly.py`
+
+Creates synthetic integrity and availability anomalies for testing. Generates new CSVs in `anomaly_data/anomaly_datasets5/`.
+
+```bash
+python anomaly_data/anomaly.py
+```
 
 ---
 
