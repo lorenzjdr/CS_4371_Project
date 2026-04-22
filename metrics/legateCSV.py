@@ -39,7 +39,7 @@ root_dir = pathlib.Path('../anomaly_data/')
 file_pattern_integrity = "anomaly_datasets*/integrity_dataset*.csv"
 file_pattern_availability = "anomaly_datasets*/availability_dataset*.csv"
 
-model_file = "../models/isolation_forest_model_environment.pkl"
+model_file = "../models/random_forest.pkl"
 
 def predict_anomalies(pattern : str):
     for file_path in root_dir.glob(pattern):
@@ -61,8 +61,7 @@ def predict_anomalies(pattern : str):
         predictions = model.predict(X_predict)
         dataframe['anomaly_prediction'] = predictions
 
-        #Filter anomalies
-        anomalies = dataframe[dataframe['anomaly_prediction'] == -1]
+        anomalies = dataframe[dataframe['anomaly_prediction'] == 1]
 
         if not anomalies.empty:
             print(f"⚠️ {len(anomalies)} anomalies detected in: {file_path.name}")
