@@ -1,4 +1,3 @@
 .venv
 *venv
 rollback_log.json
-device_mapping.pkl
