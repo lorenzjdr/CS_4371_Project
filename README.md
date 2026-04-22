@@ -13,6 +13,16 @@ H. Zahan, Md W. Al Azad, I. Ali, and S. Mastorakis, "IoT-ad: A framework to dete
 Fei Tony Liu, Kai Ming Ting, Zhi-Hua Zhou, "Isolation Forest," 2008. [Paper](https://cs.nju.edu.cn/zhouzh/zhouzh.files/publication/icdm08b.pdf)
 
 
+## Cloning the Repository
+
+To clone this repository, use the following command in your terminal:
+
+```
+git clone <repository-url>
+```
+
+Replace `<repository-url>` with the actual URL of this repository (e.g., from GitHub).
+
 ## **Setting Up a Python Virtual Environment**
 
 To keep your dependencies organized and avoid conflicts, it is recommended to use a Python virtual environment.
