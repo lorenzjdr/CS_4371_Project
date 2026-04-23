@@ -12,7 +12,11 @@ Usage:
     python detect_and_rollback.py
 """
 
+import copy
+import os
 import pickle
+import matplotlib.pyplot as plt
+import networkx as nx
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
@@ -157,6 +161,9 @@ def main():
 
     rollback = RollbackManager(net_graph)
 
+    # Snapshot the graph before any isolation
+    graph_before = copy.deepcopy(net_graph.graph)
+
     all_isolated = set()
 
     # --- Scan 1: External attack data ---
@@ -188,6 +195,63 @@ def main():
     print(f"\nTotal unique devices isolated across all scans: {len(all_isolated)}")
     rollback.status()
     print(f"Rollback log saved to: {rollback.log_path}")
+
+    # --- Visualize before/after rollback ---
+    # Shell layout: gateway in center, all other devices in outer ring
+    all_nodes = list(net_graph.graph.nodes())
+    gateway_nodes = [n for n in all_nodes if net_graph.graph.nodes[n].get("label") == "Gateway"]
+    outer_nodes = [n for n in all_nodes if n not in gateway_nodes]
+    pos = nx.shell_layout(net_graph.graph, nlist=[gateway_nodes, outer_nodes])
+
+    fig, axes = plt.subplots(1, 2, figsize=(20, 10), facecolor="#1a1a2e")
+
+    for ax, G, title in [
+        (axes[0], graph_before, "Before Rollback"),
+        (axes[1], net_graph.graph, "After Rollback"),
+    ]:
+        ax.set_facecolor("#1a1a2e")
+        colors = []
+        sizes = []
+        for node in G.nodes():
+            if G.nodes[node].get("label") == "Gateway":
+                colors.append("gold")
+                sizes.append(1800)
+            elif node in all_isolated:
+                colors.append("#FF4444")
+                sizes.append(900)
+            else:
+                colors.append("#4C9BE8")
+                sizes.append(900)
+
+        nx.draw_networkx_edges(G, pos, ax=ax, arrows=True, arrowsize=10,
+                               edge_color="#555577", width=1.2, alpha=0.6,
+                               connectionstyle="arc3,rad=0.1",
+                               min_source_margin=15, min_target_margin=15)
+        nx.draw_networkx_nodes(G, pos, ax=ax, node_color=colors,
+                               node_size=sizes, linewidths=1.2, edgecolors="white")
+        labels = {n: G.nodes[n].get("label", n) for n in G.nodes()}
+        nx.draw_networkx_labels(G, pos, labels=labels, ax=ax,
+                                font_size=7, font_color="white", font_weight="bold")
+        ax.set_title(title, color="white", fontsize=14, fontweight="bold", pad=12)
+        ax.axis("off")
+
+    # Legend
+    import matplotlib.patches as mpatches
+    legend_patches = [
+        mpatches.Patch(color="gold",    label="Gateway"),
+        mpatches.Patch(color="#4C9BE8", label="Active device"),
+        mpatches.Patch(color="#FF4444", label="Isolated device"),
+    ]
+    axes[1].legend(handles=legend_patches, loc="lower right",
+                   facecolor="#2a2a4a", edgecolor="#555577",
+                   labelcolor="white", fontsize=9)
+
+    os.makedirs("graph_output", exist_ok=True)
+    output_path = "graph_output/rollback_state.png"
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight", facecolor="#1a1a2e")
+    print(f"Graph saved to: {output_path}")
+    plt.show()
 
 
 if __name__ == "__main__":
