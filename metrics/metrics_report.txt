@@ -1,0 +1,117 @@
+======================================================================
+METRICS EXTRACTION REPORT
+======================================================================
+
+
+[OUTPUTS]
+----------------------------------------------------------------------
+  integrity_dataset3_report.txt
+    Total rows: 31,758
+    Anomalies found: 31,321
+    Normal rows: 437
+    Anomaly percentage: 98.62%
+
+  integrity_dataset50_report.txt
+    Total rows: 31,758
+    Anomalies found: 31,318
+    Normal rows: 440
+    Anomaly percentage: 98.61%
+
+  integrity_dataset5_report.txt
+    Total rows: 31,758
+    Anomalies found: 31,321
+    Normal rows: 437
+    Anomaly percentage: 98.62%
+
+
+[OUTPUTS-IFMB]
+----------------------------------------------------------------------
+  integrity_dataset3_report.txt
+    Total rows: 31,758
+    Anomalies found: 31,321
+    Normal rows: 437
+    Anomaly percentage: 98.62%
+
+  integrity_dataset50_report.txt
+    Total rows: 31,758
+    Anomalies found: 31,318
+    Normal rows: 440
+    Anomaly percentage: 98.61%
+
+  integrity_dataset5_report.txt
+    Total rows: 31,758
+    Anomalies found: 31,321
+    Normal rows: 437
+    Anomaly percentage: 98.62%
+
+
+[OUTPUTS-RF]
+----------------------------------------------------------------------
+  integrity_dataset3_report.txt
+    Total rows: 31,758
+    Anomalies found: 0
+    Normal rows: 31,758
+    Anomaly percentage: 0.00%
+
+  integrity_dataset50_report.txt
+    Total rows: 31,758
+    Anomalies found: 48
+    Normal rows: 31,710
+    Anomaly percentage: 0.15%
+
+  integrity_dataset5_report.txt
+    Total rows: 31,758
+    Anomalies found: 1
+    Normal rows: 31,757
+    Anomaly percentage: 0.00%
+
+
+======================================================================
+SUMMARY STATISTICS
+======================================================================
+
+OUTPUTS:
+----------------------------------------------------------------------
+  Number of reports: 3
+  Total rows (all reports): 95,274
+  Total anomalies found: 93,960
+  Total normal rows: 1,314
+  Overall anomaly percentage: 98.62%
+  Average anomalies per report: 31,320
+  Average anomaly percentage per report: 98.62%
+  Max anomalies in single report: 31,321
+  Min anomalies in single report: 31,318
+
+OUTPUTS-IFMB:
+----------------------------------------------------------------------
+  Number of reports: 3
+  Total rows (all reports): 95,274
+  Total anomalies found: 93,960
+  Total normal rows: 1,314
+  Overall anomaly percentage: 98.62%
+  Average anomalies per report: 31,320
+  Average anomaly percentage per report: 98.62%
+  Max anomalies in single report: 31,321
+  Min anomalies in single report: 31,318
+
+OUTPUTS-RF:
+----------------------------------------------------------------------
+  Number of reports: 3
+  Total rows (all reports): 95,274
+  Total anomalies found: 49
+  Total normal rows: 95,225
+  Overall anomaly percentage: 0.05%
+  Average anomalies per report: 16
+  Average anomaly percentage per report: 0.05%
+  Max anomalies in single report: 48
+  Min anomalies in single report: 0
+
+======================================================================
+COMPARATIVE ANALYSIS
+======================================================================
+
+  outputs: 93,960 anomalies out of 95,274 rows (98.62%)
+  outputs-ifmb: 93,960 anomalies out of 95,274 rows (98.62%)
+  outputs-rf: 49 anomalies out of 95,274 rows (0.05%)
+
+======================================================================
