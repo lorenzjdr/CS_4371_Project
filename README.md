@@ -104,7 +104,7 @@ python Random_Forest/randomforest.py
 ### 4. Run Detection and Rollback
 **File:** `detect_and_rollback.py`
 
-Runs the trained Isolation Forest model against external attack, integrity anomaly, and availability anomaly datasets. Anomalous devices are isolated by removing their communication edges from the network graph, and events are logged to `rollback_log.json`.
+Runs the trained Isolation Forest model against external attack and integrity anomaly datasets. Anomalous devices are isolated by removing their communication edges from the network graph, and events are logged to `rollback_log.json`.
 
 ```bash
 python detect_and_rollback.py
