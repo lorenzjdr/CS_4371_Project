@@ -32,6 +32,8 @@ import pandas as pd
 import numpy as np
 import warnings
 
+import sklearn.preprocessing
+
 warnings.filterwarnings("ignore")
 
 #Constants
@@ -57,7 +59,7 @@ def predict_anomalies(pattern: str):
         predictions = model.predict(X_predict)
         dataframe['anomaly_prediction'] = predictions
 
-        anomalies = dataframe[dataframe['anomaly_prediction'] == 1]
+        anomalies = dataframe[dataframe['anomaly_prediction'] == -1]
 
         # 📁 output files
         report_file = output_dir / f"{file_path.stem}_report.txt"
@@ -75,7 +77,7 @@ def predict_anomalies(pattern: str):
 
                 anomalies.to_csv(anomaly_file, index=False)
 
-                f.write(f"\nSaved anomaly CSV: {anomaly_file.name}\n")
+                f.write(f"\nSaved anomaly CSV: {anomaly_file.name}\n TestingData")
             else:
                 f.write("No anomalies detected.\n")
 
@@ -84,41 +86,30 @@ def deserialize_model():
     return joblib.load(model_file) #hardcoded model file path
 
 def prepare_features(dataframe : pd.DataFrame):
-    """
-    Prepares the features from the input dataframe for prediction. This function replicates that
-    of the process used during training, ensuring that the same preprocessing steps are applied.
+    """Encode categorical features and return X"""
+    # Drop label columns and non-feature columns
+    X = dataframe.drop(['class', 'label', 'device_label'], axis=1, errors='ignore').copy()
 
-    Args:
-        dataframe (pd.DataFrame): The input dataframe containing raw data for prediction.
-            Expected columns may include 'class', 'label', and 'device_label', which will
-            be excluded from feature preparation.
+    # Encode categorical columns
+    label_encoders = {}
+    categorical_cols = X.select_dtypes(include=['object']).columns
 
-    Returns:
-        Tuple[pd.DataFrame, Dict[str, LabelEncoder]]: A tuple containing:
-            - A dataframe with features preprocessed and ready for prediction.
-            - A dictionary of encoders used during the preprocessing phase.
-    """
-
-    # Load the saved model and the encoders used during training
-    encoders = deserialize_model().get('encoders', {})
-
-    X_predict = dataframe.drop(['label', 'device_label'], axis=1, errors='ignore').copy()
-
-    # Encode categorical columns -- apply encoders to new data
-    for col, le in encoders.items():
-        if col in X_predict.columns:
-            X_predict[col] = X_predict[col].astype(str)
-            # Use transform (NOT fit_transform) to maintain consistency with training
-            X_predict[col] = X_predict[col].map(lambda s: le.transform([s])[0] if s in le.classes_ else -1)
+    for col in categorical_cols:
+        le = sklearn.preprocessing.LabelEncoder()
+        X[col] = X[col].astype(str)
+        X[col] = le.fit_transform(X[col])
+        label_encoders[col] = le
 
     # Convert all columns to numeric and handle any remaining objects
-    # keep only numeric columns (same as training)
-    X_predict = X_predict.select_dtypes(include=['number'])
+    for col in X.columns:
+        if X[col].dtype == 'object':
+            X[col] = pd.to_numeric(X[col], errors='coerce').fillna(0)
 
-    # fill any missing values just in case
-    X_predict = X_predict.fillna(0)
+    # Ensure all columns are numeric
+    X = X.astype(float)
 
-    return X_predict, encoders
+    print(f"Features shape: {X.shape}")
+    return X, label_encoders
 
 
 #REMOVE AFTER TESTING
