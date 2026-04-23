@@ -74,17 +74,21 @@ def train_isolation(X):
     print("Isolation Forest trained")    
     return model    
 
-def save_model(model, encoders, dataset_choice, model_name):
+def save_model(model, encoders, dataset_choice, model_name, X=None):
     """Save model and encoders in the models folder"""
 
     os.makedirs("models", exist_ok=True)
     file_path = os.path.join("models", f"{model_name}_{dataset_choice}.pkl")
 
+    # Store feature names for reference
+    feature_names = list(X.columns) if X is not None else []
+
     with open(file_path, 'wb') as f:
         pickle.dump({
             'model': model,
             'encoders': encoders,
-            'dataset': dataset_choice
+            'dataset': dataset_choice,
+            'feature_names': feature_names
         }, f)
 
     print(f"Model saved to {file_path} (trained on: {dataset_choice})")
@@ -94,7 +98,7 @@ def main():
     data = load_data(DATASET_CHOICE)
     X, encoders = prepare_features(data)
     isolation_forest_model = train_isolation(X)
-    save_model(isolation_forest_model, encoders, DATASET_CHOICE,"isolation_forest_model")
+    save_model(isolation_forest_model, encoders, DATASET_CHOICE, "isolation_forest_model", X)
 
 if __name__ == "__main__":
     main()
