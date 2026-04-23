@@ -44,7 +44,7 @@ file_pattern_availability = "anomaly_datasets*/availability_dataset*.csv"
 output_dir = pathlib.Path("../outputs/")
 output_dir.mkdir(exist_ok=True)
 
-model_file = "../models/isolation_forest_model_environment.pkl"
+model_file = "../models/RandomForest_OGCode.pkl"
 
 def predict_anomalies(pattern: str):
     for file_path in root_dir.glob(pattern):
@@ -61,7 +61,7 @@ def predict_anomalies(pattern: str):
 
         anomalies = dataframe[dataframe['anomaly_prediction'] == -1]
 
-        # 📁 output files
+        # output files
         report_file = output_dir / f"{file_path.stem}_report.txt"
         anomaly_file = output_dir / f"{file_path.stem}_anomalies.csv"
 
