@@ -76,3 +76,35 @@ def plot_confusion_matrix(y_test, y_pred, output_path):
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  Saved: {output_path}")
+
+def plot_feature_importances(rf_model, feature_names, output_path):
+    importances = pd.Series(rf_model.feature_importances_,
+                            index=feature_names).sort_values(ascending=True)
+ 
+    norm = importances / importances.max()
+    colors = [plt.cm.Blues(0.35 + 0.65 * v) for v in norm]
+ 
+    fig, ax = plt.subplots(figsize=(8, 5))
+ 
+    bars = ax.barh(importances.index, importances.values,
+                   color=colors, edgecolor="none", height=0.65)
+ 
+    ax.set_title("Feature Importances (Random Forest)", fontsize=12,
+                 fontweight="bold", pad=10)
+    ax.set_xlabel("Importance", fontsize=10)
+    ax.set_facecolor("#1100ff")
+    ax.grid(axis="x", color="white", linewidth=1.3, zorder=0)
+    ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+    ax.tick_params(axis="y", labelsize=8.5)
+    ax.tick_params(axis="x", labelsize=8.5)
+    ax.set_xlim(0, importances.max() * 1.12)
+ 
+    for bar, val in zip(bars, importances.values):
+        if val > 0.005:
+            ax.text(val + importances.max() * 0.01, bar.get_y() + bar.get_height() / 2,
+                    f"{val:.3f}", va="center", fontsize=7.5, color="#333333")
+ 
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {output_path}")
