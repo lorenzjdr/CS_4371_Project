@@ -29,7 +29,6 @@ DEVICE_MAPPING_PATH = "device_mapping.pkl"
 ATTACK_DATA_PATH = "Dataset/Attack_labeled.csv"
 ENV_DATA_PATH = "Dataset/environmentMonitoring_labeled.csv"
 INTEGRITY_DATA_PATH = "anomaly_data/anomaly_datasets5/integrity_dataset5.csv"
-AVAILABILITY_DATA_PATH = "anomaly_data/anomaly_datasets5/availability_dataset5.csv"
 
 
 def load_model(path):
@@ -177,17 +176,6 @@ def main():
     integrity_df = pd.read_csv(INTEGRITY_DATA_PATH, low_memory=False)
     isolated = detect_and_isolate(
         integrity_df, "Scan 2: Integrity Anomalies (corrupted sensor values)", model, net_graph, rollback, gateway_ip, device_mapping
-    )
-    all_isolated |= isolated
-
-    # --- Scan 3: Availability anomaly data ---
-    # Availability anomalies are created by deleting rows from the dataset.
-    # Isolation Forest scores individual rows — it cannot detect that rows are
-    # missing. Any flagged rows here are residual statistical outliers, not the
-    # injected anomaly itself.
-    availability_df = pd.read_csv(AVAILABILITY_DATA_PATH, low_memory=False)
-    isolated = detect_and_isolate(
-        availability_df, "Scan 3: Availability Anomalies (row-deletion — limited IF detection)", model, net_graph, rollback, gateway_ip, device_mapping
     )
     all_isolated |= isolated
 
