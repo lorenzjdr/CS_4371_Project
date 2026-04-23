@@ -92,7 +92,7 @@ def plot_feature_importances(rf_model, feature_names, output_path):
     ax.set_title("Feature Importances (Random Forest)", fontsize=12,
                  fontweight="bold", pad=10)
     ax.set_xlabel("Importance", fontsize=10)
-    ax.set_facecolor("#1100ff")
+    ax.set_facecolor("#f8eded")
     ax.grid(axis="x", color="white", linewidth=1.3, zorder=0)
     ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
     ax.tick_params(axis="y", labelsize=8.5)
@@ -103,6 +103,51 @@ def plot_feature_importances(rf_model, feature_names, output_path):
         if val > 0.005:
             ax.text(val + importances.max() * 0.01, bar.get_y() + bar.get_height() / 2,
                     f"{val:.3f}", va="center", fontsize=7.5, color="#333333")
+ 
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {output_path}")
+
+def plot_anomaly_scores(scores, preds, output_path):
+    """
+    scores : array of anomaly scores from iso.decision_function()
+             positive = normal, negative = anomaly
+    preds  : array of predictions (1 = normal, -1 = anomaly)
+    """
+    packet_idx = np.arange(len(scores))
+    is_anomaly = preds == -1
+ 
+    fig, ax = plt.subplots(figsize=(11, 4))
+    ax.set_facecolor("#ebebeb")
+ 
+    ax.fill_between(packet_idx, scores, 0,
+                    where=~is_anomaly,
+                    color="#3d3d99", alpha=0.65, linewidth=0,
+                    label="_nolegend_")
+ 
+    ax.fill_between(packet_idx, scores, 0,
+                    where=is_anomaly,
+                    color="#cc2222", alpha=0.85, linewidth=0,
+                    label="_nolegend_")
+ 
+    ax.axhline(0, color="#cc2222", linewidth=1.5, linestyle="--", zorder=3)
+ 
+    ax.set_title("Isolation Forest — Anomaly Scores Over Time",
+                 fontsize=12, fontweight="bold", pad=10)
+    ax.set_xlabel("Packet index", fontsize=10)
+    ax.set_ylabel("Anomaly score\n(< 0 = anomaly)", fontsize=9)
+    ax.grid(axis="y", color="white", linewidth=1.0, zorder=0)
+    ax.spines[["top", "right"]].set_visible(False)
+ 
+    legend_handles = [
+        mpatches.Patch(color="#cc2222", linestyle="--",
+                       label=f"Anomaly threshold  (detected: {is_anomaly.sum()})"),
+        mpatches.Patch(color="#cc2222", alpha=0.85, label="Anomaly"),
+    ]
+    ax.legend(handles=legend_handles, loc="lower left",
+              fontsize=8.5, framealpha=0.85, facecolor="white",
+              edgecolor="#cccccc")
  
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
