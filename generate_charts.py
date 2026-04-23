@@ -1,3 +1,4 @@
+
 import argparse
 import os
 import numpy as np
@@ -8,6 +9,8 @@ import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
+ 
+# ── Config ─────────────────────────────────────────────────────────────────
  
 DEFAULT_DATASET = "anomaly_datasets5/integrity_dataset5.csv"
  
@@ -27,13 +30,18 @@ FEATURE_COLS = [
     "tcp.flags.ack",
 ]
  
+# Isolation Forest contamination — roughly the expected anomaly rate
 IF_CONTAMINATION = 0.0015
+ 
+ 
+# ── Helpers ────────────────────────────────────────────────────────────────
  
 def load_data(path):
     print(f"Loading: {path}")
     df = pd.read_csv(path, low_memory=False)
     print(f"  Rows: {len(df):,}  |  Anomalies (label=1): {(df['label'] == 1).sum()}")
  
+    # Keep only features that exist in this CSV
     available = [c for c in FEATURE_COLS if c in df.columns]
     missing   = [c for c in FEATURE_COLS if c not in df.columns]
     if missing:
@@ -42,12 +50,16 @@ def load_data(path):
     X = df[available].fillna(0).astype(float)
     y = df["label"].astype(int)
     return X, y, available
-
+ 
+ 
+# ── Chart 1: Confusion Matrix ───────────────────────────────────────────────
+ 
 def plot_confusion_matrix(y_test, y_pred, output_path):
     cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
  
     fig, ax = plt.subplots(figsize=(5, 4))
  
+    # Custom colormap that matches the style (light → dark blue)
     cmap = sns.color_palette("Blues", as_cmap=True)
  
     sns.heatmap(
@@ -63,6 +75,7 @@ def plot_confusion_matrix(y_test, y_pred, output_path):
         ax=ax,
     )
  
+    # Make zero cells readable (dark text on very light background)
     for text, val in zip(ax.texts, cm.flatten()):
         text.set_color("white" if val > cm.max() * 0.3 else "#333333")
  
@@ -76,11 +89,15 @@ def plot_confusion_matrix(y_test, y_pred, output_path):
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  Saved: {output_path}")
-
+ 
+ 
+# ── Chart 2: Feature Importances ───────────────────────────────────────────
+ 
 def plot_feature_importances(rf_model, feature_names, output_path):
     importances = pd.Series(rf_model.feature_importances_,
                             index=feature_names).sort_values(ascending=True)
  
+    # Color: darker bars for more important features
     norm = importances / importances.max()
     colors = [plt.cm.Blues(0.35 + 0.65 * v) for v in norm]
  
@@ -92,13 +109,14 @@ def plot_feature_importances(rf_model, feature_names, output_path):
     ax.set_title("Feature Importances (Random Forest)", fontsize=12,
                  fontweight="bold", pad=10)
     ax.set_xlabel("Importance", fontsize=10)
-    ax.set_facecolor("#f8eded")
+    ax.set_facecolor("#ebebeb")
     ax.grid(axis="x", color="white", linewidth=1.3, zorder=0)
     ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
     ax.tick_params(axis="y", labelsize=8.5)
     ax.tick_params(axis="x", labelsize=8.5)
     ax.set_xlim(0, importances.max() * 1.12)
  
+    # Value labels on bars
     for bar, val in zip(bars, importances.values):
         if val > 0.005:
             ax.text(val + importances.max() * 0.01, bar.get_y() + bar.get_height() / 2,
@@ -108,7 +126,10 @@ def plot_feature_importances(rf_model, feature_names, output_path):
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  Saved: {output_path}")
-
+ 
+ 
+# ── Chart 3: Isolation Forest Anomaly Scores ───────────────────────────────
+ 
 def plot_anomaly_scores(scores, preds, output_path):
     """
     scores : array of anomaly scores from iso.decision_function()
@@ -121,16 +142,19 @@ def plot_anomaly_scores(scores, preds, output_path):
     fig, ax = plt.subplots(figsize=(11, 4))
     ax.set_facecolor("#ebebeb")
  
+    # Normal traffic fill (blue/purple)
     ax.fill_between(packet_idx, scores, 0,
                     where=~is_anomaly,
                     color="#3d3d99", alpha=0.65, linewidth=0,
                     label="_nolegend_")
  
+    # Anomaly spikes (red)
     ax.fill_between(packet_idx, scores, 0,
                     where=is_anomaly,
                     color="#cc2222", alpha=0.85, linewidth=0,
                     label="_nolegend_")
  
+    # Threshold line
     ax.axhline(0, color="#cc2222", linewidth=1.5, linestyle="--", zorder=3)
  
     ax.set_title("Isolation Forest — Anomaly Scores Over Time",
@@ -140,6 +164,7 @@ def plot_anomaly_scores(scores, preds, output_path):
     ax.grid(axis="y", color="white", linewidth=1.0, zorder=0)
     ax.spines[["top", "right"]].set_visible(False)
  
+    # Legend
     legend_handles = [
         mpatches.Patch(color="#cc2222", linestyle="--",
                        label=f"Anomaly threshold  (detected: {is_anomaly.sum()})"),
@@ -153,7 +178,10 @@ def plot_anomaly_scores(scores, preds, output_path):
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  Saved: {output_path}")
-
+ 
+ 
+# ── Main ───────────────────────────────────────────────────────────────────
+ 
 def main():
     parser = argparse.ArgumentParser(description="Generate anomaly detection charts")
     parser.add_argument("--dataset", default=DEFAULT_DATASET,
