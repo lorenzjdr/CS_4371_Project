@@ -153,3 +153,59 @@ def plot_anomaly_scores(scores, preds, output_path):
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  Saved: {output_path}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate anomaly detection charts")
+    parser.add_argument("--dataset", default=DEFAULT_DATASET,
+                        help="Path to anomaly dataset CSV")
+    parser.add_argument("--output", default="chart_output",
+                        help="Output directory for chart PNGs")
+    args = parser.parse_args()
+ 
+    os.makedirs(args.output, exist_ok=True)
+ 
+    # ── Load data
+    X, y, features = load_data(args.dataset)
+ 
+    # ── Random Forest
+    print("\n[1/3] Training Random Forest...")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.25, random_state=42,
+        stratify=y if y.sum() > 1 else None
+    )
+    rf = RandomForestClassifier(
+        n_estimators=100, random_state=42, class_weight="balanced"
+    )
+    rf.fit(X_train, y_train)
+    y_pred = rf.predict(X_test)
+ 
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred, labels=[0, 1]).ravel()
+    print(f"  TN={tn}  FP={fp}  FN={fn}  TP={tp}")
+ 
+    plot_confusion_matrix(
+        y_test, y_pred,
+        os.path.join(args.output, "rf_confusion_matrix.png")
+    )
+    plot_feature_importances(
+        rf, features,
+        os.path.join(args.output, "rf_feature_importances.png")
+    )
+ 
+    # ── Isolation Forest
+    print("\n[2/3] Training Isolation Forest...")
+    iso = IsolationForest(contamination=IF_CONTAMINATION, random_state=42)
+    iso.fit(X)
+    scores = iso.decision_function(X)
+    preds  = iso.predict(X)
+    print(f"  Anomalies detected: {(preds == -1).sum()}")
+ 
+    plot_anomaly_scores(
+        scores, preds,
+        os.path.join(args.output, "if_anomaly_scores.png")
+    )
+ 
+    print(f"\nDone. Charts saved to: {args.output}/")
+ 
+ 
+if __name__ == "__main__":
+    main()
