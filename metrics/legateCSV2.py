@@ -59,16 +59,30 @@ def predict_anomalies(pattern: str):
         predictions = model.predict(X_predict)
         dataframe['anomaly_prediction'] = predictions
 
-        anomalies = dataframe[dataframe['anomaly_prediction'] == -1]
+        anomalies = dataframe[dataframe['anomaly_prediction'] == 1]
+        anomalies_true = len(dataframe[dataframe['label'] == 1])
+        anomalies_false = len(dataframe[dataframe['label'] == 0])
 
         # output files
         report_file = output_dir / f"{file_path.stem}_report.txt"
         anomaly_file = output_dir / f"{file_path.stem}_anomalies.csv"
 
+        #ticker
+        anomaly_count = len(dataframe)
+        true_positive = len(dataframe[dataframe['anomaly_prediction'] == 1][dataframe['label'] == 1]) + 0.0001 #to avoid division by zero
+        false_positive = len(dataframe[dataframe['anomaly_prediction'] == 1][dataframe['label'] == 0])
+        true_negative = len(dataframe[dataframe['anomaly_prediction'] == 0][dataframe['label'] == 0])
+        false_negative = len(dataframe[dataframe['anomaly_prediction'] == 0][dataframe['label'] == 1])
+
         with open(report_file, "w") as f:
             f.write(f"File: {file_path.name}\n")
             f.write(f"Total rows: {len(dataframe)}\n")
             f.write(f"Anomalies found: {len(anomalies)}\n\n")
+            f.write(f"Anomalies total: {anomalies_true}\n")
+
+            f.write(f"Accuracy: {round((true_positive + true_negative) / anomaly_count * 100, 3)}%\n")#TP + TN / (TP + TN + FP + FN) <- total
+            f.write(f"Precision: {round(true_positive / (true_positive + false_positive), 3)}\n")#TP / (TP + FP)
+            f.write(f"Recall: {round(true_positive / (true_positive + false_negative), 3)}\n\n")#TP / (TP + FN)
 
             if not anomalies.empty:
                 f.write("ANOMALY ROW INDICES:\n")
@@ -77,7 +91,7 @@ def predict_anomalies(pattern: str):
 
                 anomalies.to_csv(anomaly_file, index=False)
 
-                f.write(f"\nSaved anomaly CSV: {anomaly_file.name}\n TestingData")
+                f.write(f"\nSaved anomaly CSV: {anomaly_file.name}\n")
             else:
                 f.write("No anomalies detected.\n")
 
@@ -88,7 +102,7 @@ def deserialize_model():
 def prepare_features(dataframe : pd.DataFrame):
     """Encode categorical features and return X"""
     # Drop label columns and non-feature columns
-    X = dataframe.drop(['class', 'label', 'device_label'], axis=1, errors='ignore').copy()
+    X = dataframe.drop(['label', 'device_label', 'ip.dst', 'ip.src'], axis=1, errors='ignore').copy()
 
     # Encode categorical columns
     label_encoders = {}
