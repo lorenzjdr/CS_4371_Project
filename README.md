@@ -110,19 +110,29 @@ Runs the trained Isolation Forest model against external attack and integrity an
 python detect_and_rollback.py
 ```
 
+### 5. Analyze Results 
+**File:** `metrics/legateCSV2.py`
+- Use `metrics/legateCSV2.py` for batch anomaly prediction and CSV utilities.
+
+```bash
+python metrics/legateCSV2.py
+```
+
 ### 6. Analyze Results and Utilities
-- Use `metrics/legateCSV.py` for batch anomaly prediction and CSV utilities.
 - Use `device_interaction_graph.py` for graph-based analysis and visualization of device interactions.
+
+```bash
+python device_interaction_graph.py
+```
 
 ###  Optional: Generate Synthetic Anomalies
 **File:** `anomaly_data/anomaly.py`
 
-Creates synthetic integrity and availability anomalies for testing. Generates new CSVs in `anomaly_data/anomaly_datasets5/`.
+Creates synthetic integrity and availability anomalies for testing. Generates new CSVs in `anomaly_data/anomaly_datasets*/`.
 
 ```bash
 python anomaly_data/anomaly.py
 ```
-
 ---
 
 **Note:** Always activate the virtual environment before running or developing the project to ensure you are using the correct dependencies.
