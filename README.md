@@ -130,10 +130,10 @@ python metrics/legateCSV2.py
 ```
 
 ### 6. Analyze Results and Utilities
-- Use `device_interaction_graph.py` for graph-based analysis and visualization of device interactions.
+- Use `generate_charts.py` for graph-based analysis and visualization of device interactions.
 
 ```bash
-python device_interaction_graph.py
+python generate_charts.py
 ```
 
 ###  Optional: Generate Synthetic Anomalies
