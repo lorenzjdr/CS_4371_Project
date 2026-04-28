@@ -117,3 +117,28 @@ def plot_model_comparison(metrics: dict, out_path: str):
     plt.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  Saved: {out_path}")
+
+# ── Chart 2 — Feature Importances ────────────────────────────────────────────
+def plot_feature_importances(rf_model, feature_names: list, out_path: str, top_n: int = 10):
+    importances = rf_model.feature_importances_
+    idx         = np.argsort(importances)[-top_n:]
+    top_features = [feature_names[i] for i in idx]
+    top_values   = importances[idx]
+ 
+    fig, ax = plt.subplots(figsize=(9, 6))
+    colors = plt.cm.Blues(np.linspace(0.4, 0.85, top_n))
+    bars = ax.barh(top_features, top_values, color=colors, edgecolor="white", linewidth=0.7)
+ 
+    for bar, val in zip(bars, top_values):
+        ax.text(val + 0.002, bar.get_y() + bar.get_height() / 2,
+                f"{val:.4f}", va="center", fontsize=8.5, color="#333333")
+ 
+    ax.set_xlabel("Importance Score", fontsize=12)
+    ax.set_title(f"Our Random Forest — Top {top_n} Feature Importances",
+                 fontsize=13, fontweight="bold", pad=14)
+    ax.set_xlim(0, top_values.max() * 1.18)
+ 
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {out_path}")
