@@ -27,15 +27,15 @@ import warnings
 warnings.filterwarnings("ignore")
  
 # ── Config ────────────────────────────────────────────────────────────────────
-DATA_DIR = pathlib.Path("../outputs")
+BASE_DIR = pathlib.Path(__file__).parent   # CS_4371_Project/
 OUT_DIR  = pathlib.Path("chart_output")
 OUT_DIR.mkdir(exist_ok=True)
- 
-DATASETS = [
-    "integrity_dataset3_anomalies.csv",
-    "integrity_dataset5_anomalies.csv",
-    "integrity_dataset50_anomalies.csv",
-]
+
+DATASET_DIRS = {
+    "outputs-rf":      ["integrity_dataset50_anomalies.csv", "integrity_dataset5_anomalies.csv"],
+    "outputs-ogcode":  ["integrity_dataset50_anomalies.csv", "integrity_dataset5_anomalies.csv"],
+    "outputs-ifm":     ["integrity_dataset3_anomalies.csv",  "integrity_dataset50_anomalies.csv", "integrity_dataset5_anomalies.csv"],
+}
  
 COLORS = {
     "OG Random Forest":  "#4C72B0",
