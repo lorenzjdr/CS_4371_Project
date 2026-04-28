@@ -63,14 +63,18 @@ def prepare_features(df: pd.DataFrame):
 
 def load_data():
     dfs = []
-    for fname in DATASETS:
-        path = DATA_DIR / fname
-        if path.exists():
-            dfs.append(pd.read_csv(path, low_memory=False))
-        else:
-            print(f"  [WARNING] {path} not found — skipping.")
+    for folder, files in DATASET_DIRS.items():
+        for fname in files:
+            path = BASE_DIR / folder / fname
+            if path.exists():
+                df = pd.read_csv(path, low_memory=False)
+                df["source_dir"] = folder
+                dfs.append(df)
+                print(f"  Loaded: {folder}/{fname} ({len(df)} rows)")
+            else:
+                print(f"  [WARNING] {path} not found — skipping.")
     if not dfs:
-        raise FileNotFoundError(f"No dataset files found in {DATA_DIR}")
+        raise FileNotFoundError("No dataset files found.")
     combined = pd.concat(dfs, ignore_index=True)
     X = prepare_features(combined)
     y = combined["label"].values
