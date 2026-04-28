@@ -101,6 +101,15 @@ Trains a Random Forest classifier for comparison.
 python Random_Forest/randomforest.py
 ```
 
+### 4. Train the Original Code Model
+**File:** `/original_model_refactor/DeviceProfileTrain_Refactored.py`
+
+Trains the original model. 
+
+```bash
+python original_model_refactor/DeviceProfileTrain_Refactored.py
+```
+
 ### 4. Run Detection and Rollback
 **File:** `detect_and_rollback.py`
 
@@ -113,6 +122,8 @@ python detect_and_rollback.py
 ### 5. Analyze Results 
 **File:** `metrics/legateCSV2.py`
 - Use `metrics/legateCSV2.py` for batch anomaly prediction and CSV utilities.
+- Change this line with the model you want to test:
+  `model_file = "../models/[insert model name here].pkl"`
 
 ```bash
 python metrics/legateCSV2.py
