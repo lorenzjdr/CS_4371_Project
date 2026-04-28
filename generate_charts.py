@@ -27,7 +27,7 @@ import warnings
 warnings.filterwarnings("ignore")
  
 # ── Config ────────────────────────────────────────────────────────────────────
-DATA_DIR = pathlib.Path("../outputs")          # adjust to your outputs folder
+DATA_DIR = pathlib.Path("../outputs")
 OUT_DIR  = pathlib.Path("chart_output")
 OUT_DIR.mkdir(exist_ok=True)
  
@@ -51,3 +51,12 @@ plt.rcParams.update({
     "axes.facecolor":    "#f8f8f8",
     "figure.facecolor":  "white",
 })
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def prepare_features(df: pd.DataFrame):
+    drop_cols = ["label", "device_label", "ip.dst", "ip.src", "anomaly_prediction", "class"]
+    X = df.drop(drop_cols, axis=1, errors="ignore").copy()
+    for col in X.select_dtypes(include=["object"]).columns:
+        le = LabelEncoder()
+        X[col] = le.fit_transform(X[col].astype(str))
+    return X.astype(float)
