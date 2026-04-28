@@ -77,3 +77,43 @@ def load_data():
     og_preds_raw = combined["anomaly_prediction"].values
     og_preds = np.where(og_preds_raw == -1, 1, og_preds_raw)
     return X, y, og_preds, X.columns.tolist()
+
+def compute_metrics(y_true, y_pred):
+    return [
+        accuracy_score(y_true, y_pred),
+        precision_score(y_true, y_pred, zero_division=0),
+        recall_score(y_true, y_pred, zero_division=0),
+        f1_score(y_true, y_pred, zero_division=0),
+    ]
+
+# ── Chart 1 — Model Comparison ────────────────────────────────────────────────
+def plot_model_comparison(metrics: dict, out_path: str):
+    metric_names = ["Accuracy", "Precision", "Recall", "F1 Score"]
+    n_metrics = len(metric_names)
+    n_models  = len(metrics)
+    x       = np.arange(n_metrics)
+    width   = 0.22
+    offsets = np.linspace(-1, 1, n_models) * width
+ 
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for i, (model, vals) in enumerate(metrics.items()):
+        bars = ax.bar(x + offsets[i], vals, width, label=model,
+                      color=COLORS[model], alpha=0.88, edgecolor="white", linewidth=0.8)
+        for bar, val in zip(bars, vals):
+            ax.text(bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.012,
+                    f"{val:.2f}", ha="center", va="bottom",
+                    fontsize=8.5, fontweight="bold", color="#333333")
+ 
+    ax.set_xticks(x)
+    ax.set_xticklabels(metric_names, fontsize=12)
+    ax.set_ylabel("Score", fontsize=12)
+    ax.set_ylim(0, 1.15)
+    ax.set_title("Model Performance Comparison\n(OG Random Forest vs Our Random Forest vs Isolation Forest)",
+                 fontsize=13, fontweight="bold", pad=14)
+    ax.legend(loc="upper right", framealpha=0.9, fontsize=10)
+ 
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {out_path}")
