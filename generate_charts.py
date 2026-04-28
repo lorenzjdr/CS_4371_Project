@@ -142,3 +142,43 @@ def plot_feature_importances(rf_model, feature_names: list, out_path: str, top_n
     plt.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  Saved: {out_path}")
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+def main():
+    print("Loading data...")
+    X, y, og_preds, features = load_data()
+    print(f"  Total samples: {len(y)}  |  Normal: {(y==0).sum()}  |  Anomaly: {(y==1).sum()}")
+ 
+    X_train, X_test, y_train, y_test, og_tr, og_te = train_test_split(
+        X, y, og_preds, test_size=0.3, random_state=42, stratify=y
+    )
+ 
+    print("\n[1/2] Training Our Random Forest...")
+    rf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced")
+    rf.fit(X_train, y_train)
+    rf_preds = rf.predict(X_test)
+ 
+    print("[2/2] Training Isolation Forest...")
+    iso = IsolationForest(contamination=0.4, random_state=42)
+    iso.fit(X_train)
+    iso_preds = np.where(iso.predict(X_test) == -1, 1, 0)
+ 
+    metrics = {
+        "OG Random Forest":  compute_metrics(y_test, og_te),
+        "Our Random Forest": compute_metrics(y_test, rf_preds),
+        "Isolation Forest":  compute_metrics(y_test, iso_preds),
+    }
+ 
+    print("\n  Metrics summary:")
+    for model, vals in metrics.items():
+        print(f"    {model:22s}  acc={vals[0]:.3f}  prec={vals[1]:.3f}  rec={vals[2]:.3f}  f1={vals[3]:.3f}")
+ 
+    print("\nGenerating charts...")
+    plot_model_comparison(metrics, str(OUT_DIR / "1_model_comparison.png"))
+    plot_feature_importances(rf, features, str(OUT_DIR / "2_rf_feature_importances.png"))
+ 
+    print(f"\nDone. Charts saved to ./{OUT_DIR}/")
+ 
+ 
+if __name__ == "__main__":
+    main()
