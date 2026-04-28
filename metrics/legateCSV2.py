@@ -33,6 +33,7 @@ import numpy as np
 import warnings
 
 import sklearn.preprocessing
+import sklearn.ensemble
 
 warnings.filterwarnings("ignore")
 
@@ -44,7 +45,7 @@ file_pattern_availability = "anomaly_datasets*/availability_dataset*.csv"
 output_dir = pathlib.Path("../outputs/")
 output_dir.mkdir(exist_ok=True)
 
-model_file = "../models/RandomForest_OGCode.pkl"
+model_file = "../models/isolation_forest_model_environment.pkl"
 
 def predict_anomalies(pattern: str):
     for file_path in root_dir.glob(pattern):
@@ -56,10 +57,14 @@ def predict_anomalies(pattern: str):
         X_predict, encoders = prepare_features(dataframe)
         model = deserialize_model()['model']
 
+        X_predict = X_predict.reindex(columns=model.feature_names_in_, fill_value=0)
         predictions = model.predict(X_predict)
         dataframe['anomaly_prediction'] = predictions
 
-        anomalies = dataframe[dataframe['anomaly_prediction'] == 1]
+        anomaly_label = -1 if isinstance(model, sklearn.ensemble.IsolationForest) else 1
+        normal_label = 1 if anomaly_label == -1 else 0
+
+        anomalies = dataframe[dataframe['anomaly_prediction'] == anomaly_label]
         anomalies_true = len(dataframe[dataframe['label'] == 1])
         anomalies_false = len(dataframe[dataframe['label'] == 0])
 
@@ -69,10 +74,10 @@ def predict_anomalies(pattern: str):
 
         #ticker
         anomaly_count = len(dataframe)
-        true_positive = len(dataframe[dataframe['anomaly_prediction'] == 1][dataframe['label'] == 1]) + 0.0001 #to avoid division by zero
-        false_positive = len(dataframe[dataframe['anomaly_prediction'] == 1][dataframe['label'] == 0])
-        true_negative = len(dataframe[dataframe['anomaly_prediction'] == 0][dataframe['label'] == 0])
-        false_negative = len(dataframe[dataframe['anomaly_prediction'] == 0][dataframe['label'] == 1])
+        true_positive = len(dataframe[(dataframe['anomaly_prediction'] == anomaly_label) & (dataframe['label'] == 1)]) + 0.0001
+        false_positive = len(dataframe[(dataframe['anomaly_prediction'] == anomaly_label) & (dataframe['label'] == 0)])
+        true_negative = len(dataframe[(dataframe['anomaly_prediction'] == normal_label) & (dataframe['label'] == 0)])
+        false_negative = len(dataframe[(dataframe['anomaly_prediction'] == normal_label) & (dataframe['label'] == 1)])
 
         with open(report_file, "w") as f:
             f.write(f"File: {file_path.name}\n")
@@ -102,7 +107,7 @@ def deserialize_model():
 def prepare_features(dataframe : pd.DataFrame):
     """Encode categorical features and return X"""
     # Drop label columns and non-feature columns
-    X = dataframe.drop(['label', 'device_label', 'ip.dst', 'ip.src'], axis=1, errors='ignore').copy()
+    X = dataframe.drop(['class', 'label', 'device_label'], axis=1, errors='ignore').copy()
 
     # Encode categorical columns
     label_encoders = {}

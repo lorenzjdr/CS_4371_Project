@@ -1,0 +1,10 @@
+File: integrity_dataset3.csv
+Total rows: 31758
+Anomalies found: 0
+
+Anomalies total: 0
+Accuracy: 100.0%
+Precision: 1.0
+Recall: 1.0
+
+No anomalies detected.
