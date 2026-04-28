@@ -1,0 +1,48 @@
+File: integrity_dataset3.csv
+Total rows: 31758
+Anomalies found: 36
+
+Anomalies total: 0
+Accuracy: 99.887%
+Precision: 0.0
+Recall: 1.0
+
+ANOMALY ROW INDICES:
+14
+16
+34
+42
+50
+54
+20942
+20946
+20950
+20952
+20956
+20958
+20960
+20962
+20966
+21264
+21270
+21271
+21274
+21276
+21580
+21590
+21592
+21594
+21600
+21604
+21896
+22528
+24752
+25700
+26332
+30450
+31072
+31388
+31706
+31716
+
+Saved anomaly CSV: integrity_dataset3_anomalies.csv

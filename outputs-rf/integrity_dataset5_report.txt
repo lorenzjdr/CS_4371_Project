@@ -1,8 +1,0 @@
-File: integrity_dataset5.csv
-Total rows: 31758
-Anomalies found: 1
-
-ANOMALY ROW INDICES:
-18857
-
-Saved anomaly CSV: integrity_dataset5_anomalies.csv
